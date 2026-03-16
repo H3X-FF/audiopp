@@ -1,0 +1,11 @@
+build/
+audio/
+
+*.o
+*.a
+*.so
+*.out
+
+# IDE garbage
+.idea/
+cmake-build-debug/
