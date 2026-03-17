@@ -10,7 +10,8 @@ namespace fs = std::filesystem;
 
 enum AudioState {
     STOPPED,
-    PLAYING
+    PLAYING,
+    PAUSED
 };
 
 struct PlayerState {

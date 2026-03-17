@@ -6,11 +6,13 @@
 
 class AudioPlayer {
 
-    ma_engine engine;
     ma_result result;
+    ma_engine engine;
+    ma_sound sound;
 
 public:
-    void playAudio(char* file, std::atomic<AudioState>* currState);
+    // AudioPlayer();
+    void playAudio(char* file, std::atomic<AudioState>* currState, PlayerState* playerState);
     void uninit();
 };
 

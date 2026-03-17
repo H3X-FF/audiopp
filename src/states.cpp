@@ -30,12 +30,15 @@ void displayFiles(std::vector<fs::path> audioFiles, PlayerState playerState) {
     move(0, 0);
     init_pair(1, COLOR_BLACK, COLOR_WHITE);
     init_pair(2, COLOR_BLACK, COLOR_GREEN);
+    init_pair(3, COLOR_BLACK, COLOR_YELLOW);
 
     int pair;
     for (int i{0}; i < audioFiles.size(); i++) {
+        pair = 0;
+
         if (i == playerState.currSelectionIndex) pair = 1;
         else if (playerState.isPlaying && i == playerState.playingIndex) pair = 2;
-        else pair = 0;
+        else if (!playerState.isPlaying && i == playerState.playingIndex) pair = 3;
 
         attron(COLOR_PAIR(pair));
         printw("%s\n", audioFiles[i].filename().c_str());
