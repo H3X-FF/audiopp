@@ -9,6 +9,9 @@ class AudioPlayer {
     ma_result result;
     ma_engine engine;
     ma_sound sound;
+    float totalSeconds;
+    float remainingSeconds;
+    float elapsedTime;
 
 public:
     // AudioPlayer();

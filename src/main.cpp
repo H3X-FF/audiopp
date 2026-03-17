@@ -123,10 +123,11 @@ int main() {
             }
 
             displayFiles(audioFiles, playerState);
-            refresh();
 
             playerState.shouldRedraw = false;
         }
+
+        refresh();
     }
 
     endwin();

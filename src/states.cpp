@@ -7,6 +7,8 @@ void initializePlayerState(PlayerState& playerState) {
     playerState.shouldRefreshFiles = false;
     playerState.currSelectionIndex = 0;
     playerState.playingIndex = -1;
+    playerState.audioName = "";
+    playerState.duration = "";
 }
 
 std::vector<fs::path> getAudioFiles() {
@@ -30,7 +32,8 @@ void displayFiles(std::vector<fs::path> audioFiles, PlayerState playerState) {
     move(0, 0);
     init_pair(1, COLOR_BLACK, COLOR_WHITE);
     init_pair(2, COLOR_BLACK, COLOR_GREEN);
-    init_pair(3, COLOR_BLACK, COLOR_YELLOW);
+    // init_pair(3, COLOR_BLACK, COLOR_YELLOW);
+
 
     int pair;
     for (int i{0}; i < audioFiles.size(); i++) {
@@ -38,7 +41,7 @@ void displayFiles(std::vector<fs::path> audioFiles, PlayerState playerState) {
 
         if (i == playerState.currSelectionIndex) pair = 1;
         else if (playerState.isPlaying && i == playerState.playingIndex) pair = 2;
-        else if (!playerState.isPlaying && i == playerState.playingIndex) pair = 3;
+        // else if (!playerState.isPlaying && i == playerState.playingIndex) pair = 3;
 
         attron(COLOR_PAIR(pair));
         printw("%s\n", audioFiles[i].filename().c_str());

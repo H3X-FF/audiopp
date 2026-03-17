@@ -21,6 +21,7 @@ struct PlayerState {
     int playingIndex;
     int currSelectionIndex;
     std::string audioName;
+    std::string duration;
 };
 
 void initializePlayerState(PlayerState& playerState);
