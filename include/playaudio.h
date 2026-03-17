@@ -11,7 +11,8 @@ class AudioPlayer {
     ma_sound sound;
     float totalSeconds;
     float remainingSeconds;
-    float elapsedTime;
+    int elapsedMinutes;
+    float elapsedSeconds;
 
 public:
     // AudioPlayer();

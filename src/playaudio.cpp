@@ -2,6 +2,8 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <sstream>
+#include <iomanip>
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "playaudio.h"
@@ -11,8 +13,10 @@
 void uninitializePlayerState(PlayerState* playerState) {
     playerState->isPlaying = false;
     playerState->playingIndex = -1;
-    playerState->shouldRedraw = true;
+    playerState->audioName = "";
     playerState->duration = "";
+
+    playerState->shouldRedraw = true;
 }
 
 void AudioPlayer::playAudio(char *file, std::atomic<AudioState>* currState, PlayerState* playerState) {
@@ -22,7 +26,10 @@ void AudioPlayer::playAudio(char *file, std::atomic<AudioState>* currState, Play
     ma_sound_get_length_in_seconds(&sound, &totalSeconds);
     int minutes{static_cast<int>(totalSeconds) / 60};
     remainingSeconds = totalSeconds - (minutes * 60);
-    playerState->duration = std::to_string(minutes) + ":" + std::to_string(static_cast<int>(remainingSeconds));
+
+    std::stringstream ss;
+    ss<< minutes << ":" << std::setfill('0') << std::setw(2) << static_cast<int>(remainingSeconds);
+    playerState->duration = ss.str();
 
     if (result != MA_SUCCESS) {
         exit(-1);
@@ -32,15 +39,25 @@ void AudioPlayer::playAudio(char *file, std::atomic<AudioState>* currState, Play
 
     currState->store(PLAYING);
 
-    elapsedTime = 0;
+    elapsedMinutes = 0;
+    elapsedSeconds = 0;
 
     while (currState->load() != STOPPED && !ma_sound_at_end(&sound)) {
         if (currState->load() == PAUSED) ma_sound_stop(&sound);
-        else if (currState->load() == PLAYING) ma_sound_start(&sound);
+        else if (currState->load() == PLAYING) {
+            ma_sound_start(&sound);
+            elapsedSeconds += 0.5;
 
-        move(LINES-2, 0);
-        elapsedTime += 0.5;
-        printw("Time: %f/%s", elapsedTime, playerState->duration.c_str());
+            if (elapsedSeconds >= 60) {
+                elapsedMinutes++;
+                elapsedSeconds = 0;
+            }
+
+            move(LINES-2, 0);
+            printw("Time: %d:%02d/%s",elapsedMinutes, static_cast<int>(elapsedSeconds), playerState->duration.c_str());
+        }
+        clrtoeol();
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
@@ -49,4 +66,10 @@ void AudioPlayer::playAudio(char *file, std::atomic<AudioState>* currState, Play
 }
 
 void AudioPlayer::uninit() {
-    ma_engine_uninit(&engine);}
+    totalSeconds = 0;
+    remainingSeconds = 0;
+    elapsedMinutes = 0;
+    elapsedSeconds = 0;
+    ma_sound_uninit(&sound);
+    ma_engine_uninit(&engine);
+}
