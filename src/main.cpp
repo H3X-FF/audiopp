@@ -1,37 +1,35 @@
 #include <iostream>
 #include <thread>
-#include <string.h>
+#include <atomic>
+#include <vector>
+#include <filesystem>
 
 #include "states.h"
-#include "playaudio.h"
-#include "ncurses/ncurses.h"
+#include "audiomanager.h"
+#include "tuisetup.h"
+#include "ncursesw/ncurses.h"
 
 
-#ifndef PROJECT_ASSET_DIR
-    #define PROJECT_ASSET_DIR
-#endif
+// #ifndef PROJECT_ASSET_DIR
+//     #define PROJECT_ASSET_DIR
+// #endif
 
 int main() {
 
     bool running{true};
     PlayerState playerState;
-    AudioPlayer player;
-    
-    initializePlayerState(playerState);
+    AudioManager player;
 
     std::thread audioThread;
     std::atomic<AudioState> audioState;
     std::vector<fs::path> audioFiles{getAudioFiles()};
 
-    initscr();
+    WINDOW* fileWindow;
+    WINDOW* audioInfoWindow;
 
-    if (has_colors()) start_color();
-
-    curs_set(0);
-    keypad(stdscr, TRUE);
-    noecho();
-    cbreak();
-    nodelay(stdscr, TRUE);
+    initializeTerminal();
+    initializeWindows(&fileWindow, &audioInfoWindow);
+    initializePlayerState(playerState);
 
     while (running) {
         int ch{getch()};
@@ -40,6 +38,7 @@ int main() {
             switch (ch) {
                 case 27: // Escape key pressed
                     running = false;
+
                     if (audioState.load() != STOPPED) {
                         audioState.store(STOPPED);
                         audioThread.join();
@@ -59,32 +58,23 @@ int main() {
                     playerState.shouldRedraw = true;
                     break;
 
-                case 'r':
-                case 'R':
+                case 'r': // Refresh the file list
                     playerState.shouldRedraw = true;
                     playerState.shouldRefreshFiles = true;
                     break;
 
-                case ' ':
+                case ' ': // Pausing and unpausing audio
                     if (audioState.load() == STOPPED) break;
 
-                    if (audioState.load() == PLAYING) {
-                        playerState.isPlaying = false;
-                        audioState.store(PAUSED);
-                        move(playerState.playingIndex, playerState.audioName.length()+1);
-                        printw("[PAUSED]");
-                    }
-                    else {
-                        playerState.isPlaying = true;
-                        audioState.store(PLAYING);
-                        move(playerState.playingIndex, playerState.audioName.length()+1);
-                        clrtoeol();
-                    }
+                    playerState.isPlaying = !playerState.isPlaying;
+
+                    if (audioState.load() == PLAYING) audioState.store(PAUSED);
+                    else audioState.store(PLAYING);
 
                     break;
 
 
-                case '\n':
+                case '\n': // Play audio
                     if (playerState.isPlaying && playerState.currSelectionIndex == playerState.playingIndex) break;
 
                     audioState.store(STOPPED);
@@ -93,7 +83,7 @@ int main() {
 
                     if (audioThread.joinable()) audioThread.join();
 
-                    audioThread = std::thread(&AudioPlayer::playAudio, &player, audioPath, &audioState, &playerState);
+                    audioThread = std::thread(&AudioManager::playAudio, &player, audioInfoWindow, audioPath, &audioState, &playerState);
 
                     playerState.audioName = audioFiles[playerState.currSelectionIndex].filename();
                     playerState.playingIndex = playerState.currSelectionIndex;
@@ -119,17 +109,26 @@ int main() {
                 }
 
                 playerState.shouldRefreshFiles = false;
-                erase();
+                werase(fileWindow);
             }
 
-            displayFiles(audioFiles, playerState);
+            displayFiles(fileWindow ,audioFiles, playerState);
 
             playerState.shouldRedraw = false;
+
+
+            createBorder(&fileWindow);
+            createBorder(&audioInfoWindow);
+
+
+            refresh();
+            wrefresh(fileWindow);
+            wrefresh(audioInfoWindow);
         }
 
-        refresh();
     }
 
+    delwin(fileWindow);
     endwin();
 
     return 0;

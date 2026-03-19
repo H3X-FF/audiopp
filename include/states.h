@@ -4,10 +4,11 @@
 #include <filesystem>
 #include <vector>
 #include <string>
-#include <atomic>
+#include "ncursesw/ncurses.h"
 
 namespace fs = std::filesystem;
 
+// Used in std::atomic to manage the audio playing thread
 enum AudioState {
     STOPPED,
     PLAYING,
@@ -22,11 +23,12 @@ struct PlayerState {
     int currSelectionIndex;
     std::string audioName;
     std::string duration;
+    std::string status;
 };
 
 void initializePlayerState(PlayerState& playerState);
 
 std::vector<fs::path> getAudioFiles();
-void displayFiles(std::vector<fs::path> audioFiles, PlayerState playerState);
+void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, PlayerState playerState);
 
 #endif //AUDIOPP_GET_STATE_H

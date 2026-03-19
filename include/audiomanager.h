@@ -1,10 +1,12 @@
 #ifndef AUDIOPP_PLAYAUDIO_H
 #define AUDIOPP_PLAYAUDIO_H
 
+#include <atomic>
+
 #include "miniaudio.h"
 #include "states.h"
-
-class AudioPlayer {
+#include "ncursesw/ncurses.h"
+class AudioManager {
 
     ma_result result;
     ma_engine engine;
@@ -14,9 +16,13 @@ class AudioPlayer {
     int elapsedMinutes;
     float elapsedSeconds;
 
+    std::string getAudioDuration();
+
+    void displayAudioInfo(WINDOW* audioInfoWindow, PlayerState* playerState);
+
 public:
     // AudioPlayer();
-    void playAudio(char* file, std::atomic<AudioState>* currState, PlayerState* playerState);
+    void playAudio(WINDOW* audioInfoWindow, char* file, std::atomic<AudioState>* currState, PlayerState* playerState);
     void uninit();
 };
 

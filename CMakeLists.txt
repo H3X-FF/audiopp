@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
 
 execute_process(
-        COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static
+        COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
 )
 
@@ -19,8 +19,9 @@ execute_process(
 execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
 
 set(SRC_FILES src/main.cpp
-        src/playaudio.cpp
-        src/states.cpp)
+        src/audiomanager.cpp
+        src/states.cpp
+        src/tuisetup.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
@@ -31,4 +32,4 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/e
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${NCURSES_LOCAL_DIR}/include)
 target_link_directories(${PROJECT_NAME} PRIVATE ${NCURSES_LOCAL_DIR}/lib)
-target_link_libraries(${PROJECT_NAME} PRIVATE ncurses)
+target_link_libraries(${PROJECT_NAME} PRIVATE ncursesw)
