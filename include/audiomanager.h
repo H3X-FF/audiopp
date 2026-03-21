@@ -8,21 +8,34 @@
 #include "ncursesw/ncurses.h"
 class AudioManager {
 
-    ma_result result;
     ma_engine engine;
     ma_sound sound;
+
+    ma_result initializingSoundRes;
+    ma_result gettingLengthRes;
+    ma_result gettingFrameCursorsRes;
+
+    ma_uint64 frameCursor;
+    ma_uint32 sampleRate;
+
     float totalSeconds;
     float remainingSeconds;
-    int elapsedMinutes;
-    float elapsedSeconds;
+    float totalElapsedTime;
 
-    std::string getAudioDuration();
+    int elapsedMinutes;
+    int elapsedSeconds;
+
+    std::string progressBar;
+
+    std::string getFullAudioDuration();
+    void formatElapsed();
 
     void displayAudioInfo(WINDOW* audioInfoWindow, PlayerState* playerState);
+    std::string renderProgressBar(WINDOW* audioInfoWindow);
 
 public:
     // AudioPlayer();
-    void playAudio(WINDOW* audioInfoWindow, char* file, std::atomic<AudioState>* currState, PlayerState* playerState);
+    AudioState playAudio(WINDOW* audioInfoWindow, char* file, std::atomic<AudioState>* audioState, PlayerState* playerState);
     void uninit();
 };
 

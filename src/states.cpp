@@ -7,9 +7,10 @@
 void initializePlayerState(PlayerState& playerState) {
     playerState.isPlaying = false;
     playerState.shouldRedraw = true;
-    playerState.shouldRefreshFiles = false;
+    playerState.shouldRefreshFiles = true;
     playerState.currSelectionIndex = 0;
     playerState.playingIndex = -1;
+    playerState.numberOfFiles = 0;
     playerState.audioName = "";
     playerState.duration = "";
 }
