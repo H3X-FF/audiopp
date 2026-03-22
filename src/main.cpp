@@ -89,7 +89,7 @@ int main() {
                  * so that if there's an active thread that thread exits the loop, resets states
                  * then the new thread comes in and plays the new audio.
                  * The function that plays the audio will modify the state to PLAYING, and it will remain in that loop
-                 * as long as the state isn't STOPPED and the track hasn't ended*/
+                 * as long as the state isn't STOPPED and the track hasn't ended */
                 case '\n':
                     if (appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
 

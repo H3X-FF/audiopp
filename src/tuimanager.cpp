@@ -27,7 +27,7 @@ void initializeWindows(WINDOW** fileWindow, WINDOW** audioInfoWindow) {
 
     getmaxyx(stdscr, terminalHeight, terminalWidth);
 
-    int height{terminalHeight - 2};
+    int height{terminalHeight - 4};
     int width{terminalWidth/2 - 1};
 
     *fileWindow = newwin(height, width, 0, 0);

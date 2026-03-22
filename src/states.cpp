@@ -1,8 +1,23 @@
 #include <vector>
 #include <filesystem>
+#include <cstdlib>
+#include <string>
 
 #include "states.h"
 #include "ncursesw/ncurses.h"
+
+namespace fs = std::filesystem;
+
+static const char* APP_PATH{std::getenv("HOME")};
+
+std::string getHomeDir() {
+    static const std::string homedir{[]() {
+        const char* h{std::getenv("HOME")};
+        return h ? std::string(h) : "";
+    }()};
+
+    return homedir;
+};
 
 void initializeAppState(AppState& appState) {
     appState.isPlaying = false;
@@ -16,14 +31,16 @@ void initializeAppState(AppState& appState) {
 }
 
 std::vector<fs::path> getAudioFiles() {
-    fs::path audioPath{PROJECT_ASSET_DIR};
-    audioPath = audioPath / "audio";
+    fs::path appPath{getHomeDir()};
+    appPath /= ".local";
+
+    fs::path audioPath{appPath/"audiopp/audio"};
 
     std::vector<fs::path> files;
 
-    if (!fs::is_directory(audioPath)) fs::create_directory(audioPath);
+    if (!fs::is_directory(audioPath)) fs::create_directories(audioPath);
 
-    for (const auto entry : fs::directory_iterator(audioPath)) {
+    for (const auto entry : fs::directory_iterator(appPath)) {
         if (entry.path().extension() == ".wav") {
             files.push_back(entry.path());
         }
