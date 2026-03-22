@@ -4,15 +4,15 @@
 #include "states.h"
 #include "ncursesw/ncurses.h"
 
-void initializePlayerState(PlayerState& playerState) {
-    playerState.isPlaying = false;
-    playerState.shouldRedraw = true;
-    playerState.shouldRefreshFiles = true;
-    playerState.currSelectionIndex = 0;
-    playerState.playingIndex = -1;
-    playerState.numberOfFiles = 0;
-    playerState.audioName = "";
-    playerState.duration = "";
+void initializeAppState(AppState& appState) {
+    appState.isPlaying = false;
+    appState.shouldRedraw = true;
+    appState.shouldRefreshFiles = true;
+    appState.currSelectionIndex = 0;
+    appState.playingIndex = -1;
+    appState.numberOfFiles = 0;
+    appState.audioName = "";
+    appState.duration = "";
 }
 
 std::vector<fs::path> getAudioFiles() {
@@ -32,15 +32,15 @@ std::vector<fs::path> getAudioFiles() {
     return files;
 }
 
-void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, PlayerState playerState) {
+void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, AppState appState) {
 
     int pair;
 
     for (int i{0}; i < audioFiles.size(); i++) {
         pair = 0;
 
-        if (i == playerState.currSelectionIndex) pair = 1;
-        else if (playerState.isPlaying && i == playerState.playingIndex) pair = 2;
+        if (i == appState.currSelectionIndex) pair = 1;
+        else if (appState.isPlaying && i == appState.playingIndex) pair = 2;
 
         wattron(fileWindow, COLOR_PAIR(pair));
         mvwprintw(fileWindow, i+1, 2, "%s\n", audioFiles[i].filename().c_str());

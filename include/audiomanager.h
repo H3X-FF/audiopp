@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-#include "miniaudio.h"
+#include "miniaudio/miniaudio.h"
 #include "states.h"
 #include "ncursesw/ncurses.h"
 class AudioManager {
@@ -30,12 +30,12 @@ class AudioManager {
     std::string getFullAudioDuration();
     void formatElapsed();
 
-    void displayAudioInfo(WINDOW* audioInfoWindow, PlayerState* playerState);
-    std::string renderProgressBar(WINDOW* audioInfoWindow);
+    void displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState);
+    std::string renderProgressBar(WINDOW** audioInfoWindow);
 
 public:
     // AudioPlayer();
-    AudioState playAudio(WINDOW* audioInfoWindow, char* file, std::atomic<AudioState>* audioState, PlayerState* playerState);
+    AudioState playAudio(WINDOW** audioInfoWindow, char* file, std::atomic<AudioState>* audioState, AppState* appState);
     void uninit();
 };
 

@@ -1,5 +1,7 @@
 #include <locale.h>
-#include "tuisetup.h"
+
+#include "states.h"
+#include "tuimanager.h"
 #include "ncursesw/ncurses.h"
 
 void initializeTerminal() {
@@ -20,14 +22,16 @@ void initializeTerminal() {
 }
 
 void initializeWindows(WINDOW** fileWindow, WINDOW** audioInfoWindow) {
-    int terminalHeight, terminalWidth;
+    int terminalHeight;
+    int terminalWidth;
+
     getmaxyx(stdscr, terminalHeight, terminalWidth);
 
-    int height{LINES-3};
-    int width{COLS/2 - 1};
+    int height{terminalHeight - 2};
+    int width{terminalWidth/2 - 1};
 
     *fileWindow = newwin(height, width, 0, 0);
-    *audioInfoWindow = newwin(height, width, 0, width);
+    *audioInfoWindow = newwin(height, width, 0, terminalWidth/2);
 }
 
 void createBorder(WINDOW** window) {

@@ -21,7 +21,7 @@ execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DI
 set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
         src/states.cpp
-        src/tuisetup.cpp)
+        src/tuimanager.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 

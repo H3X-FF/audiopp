@@ -10,6 +10,7 @@ namespace fs = std::filesystem;
 
 // Used in std::atomic to manage the audio playing thread
 enum AudioState {
+    RESIZING,
     FAILED,
     SUCCESS,
     STOPPED,
@@ -18,10 +19,11 @@ enum AudioState {
     FINISHED
 };
 
-struct PlayerState {
+struct AppState {
     bool isPlaying;
     bool shouldRedraw;
     bool shouldRefreshFiles;
+    bool shouldResize;
     int playingIndex;
     int currSelectionIndex;
     int numberOfFiles;
@@ -30,9 +32,9 @@ struct PlayerState {
     std::string status;
 };
 
-void initializePlayerState(PlayerState& playerState);
+void initializeAppState(AppState& appState);
 
 std::vector<fs::path> getAudioFiles();
-void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, PlayerState playerState);
+void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, AppState appState);
 
 #endif //AUDIOPP_GET_STATE_H

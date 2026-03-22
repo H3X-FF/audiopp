@@ -7,18 +7,19 @@
 
 #define MINIAUDIO_IMPLEMENTATION
 
+#include "miniaudio/miniaudio.h"
 #include "ncursesw/ncurses.h"
 #include "audiomanager.h"
 #include "states.h"
-#include "tuisetup.h"
+#include "tuimanager.h"
 
-void uninitializePlayerState(PlayerState* playerState) {
-    playerState->isPlaying = false;
-    playerState->playingIndex = -1;
-    playerState->audioName = "";
-    playerState->duration = "";
+void uninitializeAppState(AppState* appState) {
+    appState->isPlaying = false;
+    appState->playingIndex = -1;
+    appState->audioName = "";
+    appState->duration = "";
 
-    playerState->shouldRedraw = true;
+    appState->shouldRedraw = true;
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -38,36 +39,36 @@ void AudioManager::formatElapsed() {
     elapsedSeconds = static_cast<int>(totalElapsedTime) % 60;
 }
 
-void AudioManager::displayAudioInfo(WINDOW* audioInfoWindow, PlayerState* playerState) {
-    playerState->duration = getFullAudioDuration();
+void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState) {
+    appState->duration = getFullAudioDuration();
 
-    werase(audioInfoWindow);
+    werase(*audioInfoWindow);
 
-    wmove(audioInfoWindow, 1, 2);
+    wmove(*audioInfoWindow, 1, 2);
     // wclrtoeol(audioInfoWindow);
-    wprintw(audioInfoWindow, "Now Playing: %s", playerState->audioName.c_str());
+    wprintw(*audioInfoWindow, "Now Playing: %s", appState->audioName.c_str());
 
-    wmove(audioInfoWindow, 2, 2);
+    wmove(*audioInfoWindow, 2, 2);
     // wclrtoeol(audioInfoWindow);
-    wprintw(audioInfoWindow, "Status: %s", playerState->status.c_str());
+    wprintw(*audioInfoWindow, "Status: %s", appState->status.c_str());
 
 
     formatElapsed();
 
-    wmove(audioInfoWindow, 3, 2);
+    wmove(*audioInfoWindow, 3, 2);
     // wclrtoeol(audioInfoWindow);
-    wprintw(audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, playerState->duration.c_str());
+    wprintw(*audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, appState->duration.c_str());
 
-    wmove(audioInfoWindow, 4, 2);
-    wprintw(audioInfoWindow, "%s", progressBar.c_str());
+    wmove(*audioInfoWindow, 4, 2);
+    wprintw(*audioInfoWindow, "%s", progressBar.c_str());
 
-    createBorder(&audioInfoWindow);
-    wrefresh(audioInfoWindow);
+    createBorder(audioInfoWindow);
+    wrefresh(*audioInfoWindow);
 }
 
-std::string AudioManager::renderProgressBar(WINDOW* audioInfoWindow) {
+std::string AudioManager::renderProgressBar(WINDOW** audioInfoWindow) {
     int padding{10};
-    int barWidth{getmaxx(audioInfoWindow) - padding};
+    int barWidth{getmaxx(*audioInfoWindow) - padding};
     double progress{totalElapsedTime / totalSeconds};
     double filled{progress * barWidth};
 
@@ -84,7 +85,7 @@ std::string AudioManager::renderProgressBar(WINDOW* audioInfoWindow) {
     return bar;
 }
 
-AudioState AudioManager::playAudio(WINDOW* audioInfoWindow, char* file, std::atomic<AudioState>* currState, PlayerState* playerState) {
+AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::atomic<AudioState>* currState, AppState* appState) {
     ma_engine_init(NULL, &engine);
 
     initializingSoundRes = ma_sound_init_from_file(&engine, file, 0, NULL, NULL, &sound);
@@ -108,31 +109,33 @@ AudioState AudioManager::playAudio(WINDOW* audioInfoWindow, char* file, std::ato
         if (currState->load() == PAUSED) {
             ma_sound_stop(&sound);
 
-            playerState->status = "Paused";
+            appState->status = "Paused";
         }
         else if (currState->load() == PLAYING) {
             ma_sound_start(&sound);
 
-            playerState->status = "Playing";
+            appState->status = "Playing";
         }
 
-        progressBar = renderProgressBar(audioInfoWindow);
-        displayAudioInfo(audioInfoWindow, playerState);
+        if (currState->load() != RESIZING) {
+            progressBar = renderProgressBar(audioInfoWindow);
+            displayAudioInfo(audioInfoWindow, appState);
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     // Temporary until I add a play next feature :)
     if (ma_sound_at_end(&sound)) {
-        wmove(audioInfoWindow, 2, 2);
-        wclrtoeol(audioInfoWindow);
-        wprintw(audioInfoWindow, "Status: Finished");
-        wrefresh(audioInfoWindow);
+        wmove(*audioInfoWindow, 2, 2);
+        wclrtoeol(*audioInfoWindow);
+        wprintw(*audioInfoWindow, "Status: Finished");
+        wrefresh(*audioInfoWindow);
         refresh();
     }
     //--------------------------------------------------
 
-    uninitializePlayerState(playerState);
+    uninitializeAppState(appState);
     uninit();
 
     return SUCCESS;
