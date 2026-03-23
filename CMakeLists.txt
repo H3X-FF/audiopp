@@ -18,14 +18,18 @@ execute_process(
 
 execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
 
+set(USR_HOME_DIR $ENV{HOME})
+
 set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
         src/states.cpp
-        src/tuimanager.cpp)
+        src/tuimanager.cpp
+        src/commandline.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE PROJECT_ASSET_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE APP_PATH=\"${USR_HOME_DIR}/.local/audiopp\")
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external)
