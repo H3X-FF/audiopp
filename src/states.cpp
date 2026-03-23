@@ -32,7 +32,7 @@ std::vector<fs::path> getAudioFiles() {
     if (!fs::exists(audioPath)) fs::create_directories(audioPath);
 
     // Populate file list with supported formats
-    for (const auto& entry : fs::directory_iterator(audioPath)) {
+    for (const auto entry : fs::directory_iterator(audioPath)) {
         if (entry.path().extension() == ".wav") {
             files.push_back(entry.path());
         }

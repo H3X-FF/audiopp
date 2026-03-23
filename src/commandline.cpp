@@ -53,6 +53,22 @@ void CommandManager::run::scan(const std::vector<std::string>& args, const std::
             }
         }
     }
+    else {
+        for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
+            std::string fileExtension{entry.path().extension()};
+
+            // Case-insensitive extension check
+            std::transform(fileExtension.begin(), fileExtension.end(),
+                fileExtension.begin(), [](unsigned char c) {
+                return std::tolower(c);
+            });
+
+            if (fileExtension == ".wav") {
+                fs::copy(entry.path(), audioPath);
+                if (operation == "--move") fs::remove(entry.path());
+            }
+        }
+    }
 }
 
 void CommandManager::run::handleCommand(const std::vector<std::string>& tokens) {

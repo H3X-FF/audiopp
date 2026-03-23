@@ -102,7 +102,6 @@ int main() {
                     else audioState.store(PLAYING);
                     break;
 
-
                 /*
                 * Plays audio and manages the audio thread. It signals a stop first, checks if we can join the thread
                 * so that if there's an active thread that thread exits the loop, resets states
