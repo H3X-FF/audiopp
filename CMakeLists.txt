@@ -6,17 +6,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
 
-execute_process(
-        COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
-)
+file(GLOB NCURSESW_HEADERS NCURSES_LOCAL_DIR/ncursesw/include/*.h)
+file(GLOB NCURSESW_LIBS NCURSES_LOCAL_DIR/lib/*.a)
 
-execute_process(
-        COMMAND make
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
-)
+if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR} AND ${NCURSESW_HEADERS} AMD ${NCURSESW_LIBS})
+    execute_process(
+            COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
+    )
 
-execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
+    execute_process(
+            COMMAND make
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
+    )
+
+    execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
+
+endif ()
 
 set(USR_HOME_DIR $ENV{HOME})
 
@@ -24,7 +30,8 @@ set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
         src/states.cpp
         src/tuimanager.cpp
-        src/commandline.cpp)
+        src/commandpipeline.cpp
+        src/runcommand.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 

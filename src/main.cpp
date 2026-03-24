@@ -8,7 +8,7 @@
 #include "audiomanager.hpp"
 #include "tuimanager.hpp"
 #include "ncursesw/ncurses.h"
-#include "commandline.hpp"
+#include "commandpipeline.hpp"
 
 int main() {
     bool running{true};
@@ -119,16 +119,6 @@ int main() {
                     if (audioThread.joinable()) audioThread.join();
 
                     audioThread = std::thread(&AudioManager::playAudio, &player, &audioInfoWindow, audioPath, &audioState, &appState);
-
-                    if (audioState.load() == FAILED) {
-                        audioThread.join();
-                        attron(COLOR_RED);
-                        mvwprintw(audioInfoWindow, 1, 2, "Failed to play audio");
-                        attroff(COLOR_RED);
-                        refresh();
-                        wrefresh(audioInfoWindow);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(600));
-                    }
 
                     appState.audioName = audioFiles[appState.currSelectionIndex].filename();
                     appState.playingIndex = appState.currSelectionIndex;

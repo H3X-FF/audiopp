@@ -24,12 +24,17 @@ class AudioManager {
     ma_uint32 sampleRate;
 
     float totalSeconds;
-    float remainingSeconds;
-    float totalElapsedTime;
+    double remainingSeconds;
+    double totalElapsedTime;
 
     int elapsedMinutes;
     int elapsedSeconds;
 
+    int maxAmplitude;
+    double amplitude;
+    double visTimer;
+
+    std::string duration;
     std::string progressBar;
     std::string status;
 
@@ -45,7 +50,11 @@ class AudioManager {
     /** @brief Generates a string representation of the playback progress. */
     std::string renderProgressBar(WINDOW** audioInfoWindow);
 
+    /** @brief Renders a smooth traveling oscilloscope line. */
+    void renderOscilloscope(WINDOW** audioInfoWindow);
+
 public:
+    AudioManager();
     /**
      * @brief Primary playback loop intended to run in a separate thread.
      * @param audioState Atomic control for thread communication.

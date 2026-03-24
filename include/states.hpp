@@ -26,12 +26,11 @@ struct AppState {
     bool shouldResize;
     bool shouldClearCL;
 
-    int playingIndex;         // Index of the track currently loaded in the engine
-    int currSelectionIndex;   // Index of the track highlighted in the UI
+    int playingIndex;
+    int currSelectionIndex;
     int numberOfFiles;
 
     std::string audioName;
-    std::string duration;
 };
 
 /** @brief Sets default values for the AppState. */

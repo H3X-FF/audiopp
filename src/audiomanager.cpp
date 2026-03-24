@@ -4,6 +4,7 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio/miniaudio.h"
@@ -12,12 +13,19 @@
 #include "states.hpp"
 #include "tuimanager.hpp"
 
-/** @brief Resets UI-related playback state when audio stops. */
+AudioManager::AudioManager() {
+    totalElapsedTime = 0;
+
+    maxAmplitude = 6;
+    amplitude = 0.0;
+    visTimer = 0.0;
+}
+
+// Resets UI-related playback state when audio stops.
 void uninitializeAppState(AppState* appState) {
     appState->isPlaying = false;
     appState->playingIndex = -1;
     appState->audioName = "";
-    appState->duration = "";
     appState->shouldRedraw = true;
 }
 
@@ -35,37 +43,9 @@ void AudioManager::formatElapsed() {
     elapsedSeconds = static_cast<int>(totalElapsedTime) % 60;
 }
 
-void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState) {
-    appState->duration = getFullAudioDuration();
-
-    werase(*audioInfoWindow);
-
-    // Render Track Name
-    wmove(*audioInfoWindow, 1, 2);
-    wprintw(*audioInfoWindow, "Now Playing: %s", appState->audioName.c_str());
-
-    // Render Playback Status
-    wmove(*audioInfoWindow, 2, 2);
-    wprintw(*audioInfoWindow, "Status: %s", status.c_str());
-
-    formatElapsed();
-
-    // Render Timestamp
-    wmove(*audioInfoWindow, 3, 2);
-    wprintw(*audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, appState->duration.c_str());
-
-    // Render Progress Bar
-    wmove(*audioInfoWindow, 4, 2);
-    wprintw(*audioInfoWindow, "%s", progressBar.c_str());
-
-    createBorder(audioInfoWindow);
-    wrefresh(*audioInfoWindow);
-}
-
 std::string AudioManager::renderProgressBar(WINDOW** audioInfoWindow) {
     int padding{10};
     int barWidth{getmaxx(*audioInfoWindow) - padding};
-    // Prevent division by zero if totalSeconds is not yet loaded
     double progress{totalSeconds > 0 ? totalElapsedTime / totalSeconds : 0};
     double filled{progress * barWidth};
 
@@ -77,6 +57,56 @@ std::string AudioManager::renderProgressBar(WINDOW** audioInfoWindow) {
     bar += ']';
 
     return bar;
+}
+
+void AudioManager::renderOscilloscope(WINDOW** audioInfoWindow) {
+    int winHeight, winWidth;
+    getmaxyx(*audioInfoWindow, winHeight, winWidth);
+
+    int centerY = winHeight / 2;
+    double frequency = 0.1;
+
+    wattron(*audioInfoWindow, COLOR_PAIR(4));
+
+    for (int x = 0; x < winWidth; x++) {
+        double sineVal = std::sin((x * frequency) - visTimer);
+
+        double harmonic = std::sin((x * frequency * 2.5) + (visTimer * 0.5)) * 0.3;
+
+        int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * amplitude);
+        int finalY = centerY + yOffset;
+
+        if (finalY > 0 && finalY < winHeight - 1) mvwaddwstr(*audioInfoWindow, finalY, x, L"━");
+
+    }
+
+    wattroff(*audioInfoWindow, COLOR_PAIR(4));
+}
+
+void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState) {
+    int xPadding{2};
+
+    werase(*audioInfoWindow);
+
+    renderOscilloscope(audioInfoWindow);
+
+    wmove(*audioInfoWindow, 1, xPadding);
+    wprintw(*audioInfoWindow, "Now Playing: %s", appState->audioName.c_str());
+
+    wmove(*audioInfoWindow, 2, xPadding);
+    wprintw(*audioInfoWindow, "Status: %s", status.c_str());
+
+    formatElapsed();
+
+    wmove(*audioInfoWindow, 3, xPadding);
+    wprintw(*audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, duration.c_str());
+
+    wmove(*audioInfoWindow, 4, xPadding);
+    wprintw(*audioInfoWindow, "%s", progressBar.c_str());
+
+    createBorder(audioInfoWindow);
+
+    wrefresh(*audioInfoWindow);
 }
 
 AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::atomic<AudioState>* currState, AppState* appState) {
@@ -91,35 +121,42 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
     ma_sound_start(&sound);
 
     currState->store(PLAYING);
-    totalElapsedTime = 0;
+    duration = getFullAudioDuration();
 
-    // Main playback loop
+    auto lastTime{std::chrono::high_resolution_clock::now()};
+
     while (currState->load() != STOPPED && !ma_sound_at_end(&sound)) {
 
-        // Synchronize engine cursor with TUI timing
+        auto currentTime{std::chrono::high_resolution_clock::now()};
+        double dt{std::chrono::duration<double>(currentTime - lastTime).count()};
+        lastTime = currentTime;
+
         ma_sound_get_cursor_in_pcm_frames(&sound, &frameCursor);
         totalElapsedTime = static_cast<double>(frameCursor) / sampleRate;
 
-        // Handle Play/Pause logic based on atomic state
-        if (currState->load() == PAUSED) {
-            ma_sound_stop(&sound);
-            status = "Paused";
-        }
-        else if (currState->load() == PLAYING) {
+        // Increment timer for wave movement
+        visTimer += 10.0 * dt;
+
+        // Handling the visualizer by making a smooth fade in/fade out depending on state
+        if (currState->load() == PLAYING) {
             ma_sound_start(&sound);
             status = "Playing";
+            if (amplitude < 1.0) amplitude += 4.0 * dt;
+        }
+        else if (currState->load() == PAUSED) {
+            ma_sound_stop(&sound);
+            status = "Paused";
+            if (amplitude > 0) amplitude -= 4.0 * dt;
         }
 
-        // Only update UI if not in the middle of a window resize
         if (currState->load() != RESIZING) {
             progressBar = renderProgressBar(audioInfoWindow);
             displayAudioInfo(audioInfoWindow, appState);
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
-    // Handle end-of-track UI state
     if (ma_sound_at_end(&sound)) {
         wmove(*audioInfoWindow, 2, 2);
         wclrtoeol(*audioInfoWindow);
@@ -135,10 +172,6 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
 }
 
 void AudioManager::uninit() {
-    totalSeconds = 0;
-    remainingSeconds = 0;
-    totalElapsedTime = 0;
-
     ma_sound_uninit(&sound);
     ma_engine_uninit(&engine);
 }

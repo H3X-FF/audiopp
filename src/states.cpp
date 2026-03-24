@@ -19,7 +19,6 @@ void initializeAppState(AppState& appState) {
     appState.numberOfFiles = 0;
 
     appState.audioName = "";
-    appState.duration = "";
 }
 
 std::vector<fs::path> getAudioFiles() {
@@ -28,10 +27,8 @@ std::vector<fs::path> getAudioFiles() {
 
     std::vector<fs::path> files;
 
-    // Ensure storage directory exists
     if (!fs::exists(audioPath)) fs::create_directories(audioPath);
 
-    // Populate file list with supported formats
     for (const auto entry : fs::directory_iterator(audioPath)) {
         if (entry.path().extension() == ".wav") {
             files.push_back(entry.path());
@@ -45,9 +42,8 @@ void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, AppState
     int pair;
 
     for (int i{0}; i < audioFiles.size(); i++) {
-        pair = 0; // Default style
+        pair = 0;
 
-        // Apply highlighting for current cursor selection or currently playing file
         if (i == appState.currSelectionIndex) pair = 1;
         else if (appState.isPlaying && i == appState.playingIndex) pair = 2;
 

@@ -8,21 +8,19 @@ void initializeTerminal() {
     initscr();
     start_color();
 
-    // Color Pair Definitions:
-    // 1: Selection Highlight
-    // 2: Currently Playing Highlight
-    // 3: Error/Alert Style
+
     init_pair(1, COLOR_BLACK, COLOR_WHITE);
     init_pair(2, COLOR_BLACK, COLOR_GREEN);
     init_pair(3, COLOR_RED, COLOR_WHITE);
+    init_pair(4, COLOR_GREEN, 0);
 
-    setlocale(LC_ALL, ""); // Required for wide characters/UTF-8 borders
+    setlocale(LC_ALL, "");
 
-    curs_set(0);           // Hide physical terminal cursor
-    keypad(stdscr, TRUE);  // Enable arrow keys
-    noecho();              // Don't echo input to screen
-    cbreak();              // Disable line buffering
-    nodelay(stdscr, TRUE); // Non-blocking getch()
+    curs_set(0);
+    keypad(stdscr, TRUE);
+    noecho();
+    cbreak();
+    nodelay(stdscr, TRUE);
 }
 
 void initializeWindows(WINDOW** fileWindow, WINDOW** audioInfoWindow) {
