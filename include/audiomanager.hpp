@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <string>
+#include <thread>
 
 #include "miniaudio/miniaudio.h"
 #include "states.hpp"
@@ -12,6 +13,13 @@
  * @brief Handles audio initialization, playback, and TUI info rendering.
  */
 class AudioManager {
+    WINDOW** audioInfoWindow;
+    char* audioFile;
+    std::atomic<AudioState>* audioState;
+    AppState* appState;
+
+    std::thread audioThread;
+
     ma_engine engine;
     ma_sound sound;
 
@@ -53,14 +61,24 @@ class AudioManager {
     /** @brief Renders a smooth traveling oscilloscope line. */
     void renderOscilloscope(WINDOW** audioInfoWindow);
 
-public:
-    AudioManager();
+    /** @brief initializes the devices used by miniaudio. */
+    AudioState initializeMA();
+
     /**
      * @brief Primary playback loop intended to run in a separate thread.
      * @param audioState Atomic control for thread communication.
      */
-    AudioState playAudio(WINDOW** audioInfoWindow, char* file, std::atomic<AudioState>* audioState, AppState* appState);
+    void playAndManageAudio();
 
     /** @brief Cleanly shuts down the miniaudio engine and sound objects. */
-    void uninit();
+    void uninitializeMA();
+
+
+public:
+    AudioManager();
+
+    void triggerAudioThread(WINDOW** infoWin, AppState* aState,
+                                    std::atomic<AudioState>* audioAtomic, char* filePath);
+
+    void terminateAudioThread();
 };

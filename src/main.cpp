@@ -10,6 +10,8 @@
 #include "ncursesw/ncurses.h"
 #include "commandpipeline.hpp"
 
+
+
 int main() {
     bool running{true};
     AppState appState;
@@ -43,10 +45,7 @@ int main() {
             switch (ch) {
                 case 27: // Escape key: Clean shutdown
                     running = false;
-                    if (audioState.load() != STOPPED) {
-                        audioState.store(STOPPED);
-                        if (audioThread.joinable()) audioThread.join();
-                    }
+                    if (audioState.load() != STOPPED) player.terminateAudioThread();
                     break;
 
                 case ':': // Enter Command Mode
@@ -57,8 +56,9 @@ int main() {
                     clrtoeol();
                     printw(":");
 
+                    /* Encountered an issue with the enter key leaking into the input,
+                     * so this flag is added to block from trying to play audio when in command mode */
                     appState.inCommandMode = true;
-
                     if (getnstr(command, sizeof(command)-1) == OK) {
                         bkgdset(A_NORMAL);
                         clrtoeol();
@@ -118,15 +118,12 @@ int main() {
                 case '\n':
                     if (appState.inCommandMode || appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
 
-                    audioState.store(STOPPED);
                     char* audioPath{const_cast<char*>(audioFiles[appState.currSelectionIndex].c_str())};
 
-                    if (audioThread.joinable()) audioThread.join();
+                    player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioPath);
 
-                    audioThread = std::thread(&AudioManager::playAudio, &player, &audioInfoWindow, audioPath, &audioState, &appState);
-
-                    appState.audioName = audioFiles[appState.currSelectionIndex].filename();
                     appState.playingIndex = appState.currSelectionIndex;
+                    appState.audioName = audioFiles[appState.playingIndex].filename();
                     appState.isPlaying = true;
                     appState.shouldRedraw = true;
                     break;
@@ -151,6 +148,21 @@ int main() {
                 appState.shouldRedraw = true;
                 audioState.store(prevAudioState);
             }
+        }
+
+        if (appState.playNext) {
+            if (appState.playingIndex < appState.numberOfFiles - 1) appState.playingIndex++;
+            else appState.playingIndex = 0;
+
+            char* audioPath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
+            player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioPath);
+
+
+            appState.audioName = audioFiles[appState.playingIndex].filename();
+            appState.isPlaying = true;
+            appState.shouldRedraw = true;
+
+            appState.playNext = false;
         }
 
         /* Redrawing is requested by the user navigating the files, refreshing the list, or playing audio.

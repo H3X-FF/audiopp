@@ -14,6 +14,7 @@ void initializeAppState(AppState& appState) {
     appState.shouldRefreshFiles = true;
     appState.shouldResize = false;
     appState.inCommandMode = false;
+    appState.playNext = false;
 
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;

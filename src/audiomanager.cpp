@@ -13,6 +13,11 @@
 #include "states.hpp"
 #include "tuimanager.hpp"
 
+void AudioManager::terminateAudioThread() {
+    audioState->store(STOPPED);
+    if (audioThread.joinable()) audioThread.join();
+}
+
 AudioManager::AudioManager() {
     totalElapsedTime = 0;
 
@@ -109,10 +114,23 @@ void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState
     wrefresh(*audioInfoWindow);
 }
 
-AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::atomic<AudioState>* currState, AppState* appState) {
+void AudioManager::triggerAudioThread(WINDOW** infoWin, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
+    audioInfoWindow = infoWin;
+    appState = aState;
+    audioState = audioAtomic;
+    audioFile = filePath;
+
+    audioState->store(STOPPED);
+
+    if (audioThread.joinable()) audioThread.join();
+
+    audioThread = std::thread(&AudioManager::playAndManageAudio, this);
+}
+
+AudioState AudioManager::initializeMA() {
     ma_engine_init(NULL, &engine);
 
-    initializingSoundRes = ma_sound_init_from_file(&engine, file, 0, NULL, NULL, &sound);
+    initializingSoundRes = ma_sound_init_from_file(&engine, audioFile, 0, NULL, NULL, &sound);
     gettingLengthRes = ma_sound_get_length_in_seconds(&sound, &totalSeconds);
 
     if (initializingSoundRes != MA_SUCCESS || gettingLengthRes != MA_SUCCESS) return FAILED;
@@ -120,15 +138,19 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
     ma_sound_get_data_format(&sound, NULL, NULL, &sampleRate, NULL, 0);
     ma_sound_start(&sound);
 
-    currState->store(PLAYING);
+    audioState->store(PLAYING);
     duration = getFullAudioDuration();
+
+    return SUCCESS;
+}
+
+void AudioManager::playAndManageAudio() {
+    if (initializeMA() == FAILED) return;
 
     auto lastTime{std::chrono::high_resolution_clock::now()};
 
-    //----------------------------------------------------------------------------------------
-
     // The audio thread settles in here. It performs action depending on the audio state
-    while (currState->load() != STOPPED && !ma_sound_at_end(&sound)) {
+    while (audioState->load() != STOPPED && !ma_sound_at_end(&sound)) {
 
         auto currentTime{std::chrono::high_resolution_clock::now()};
         double dt{std::chrono::duration<double>(currentTime - lastTime).count()};
@@ -138,21 +160,21 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
         totalElapsedTime = static_cast<double>(frameCursor) / sampleRate;
 
         // Increment timer for wave movement
-        visTimer += 10.0 * dt;
+        visTimer += 5.0 * dt;
 
         // Handling the visualizer by making a smooth fade in/fade out depending on state
-        if (currState->load() == PLAYING) {
+        if (audioState->load() == PLAYING) {
             ma_sound_start(&sound);
             status = "Playing";
             if (amplitude < 1.0) amplitude += 4.0 * dt;
         }
-        else if (currState->load() == PAUSED) {
+        else if (audioState->load() == PAUSED) {
             ma_sound_stop(&sound);
             status = "Paused";
             if (amplitude > 0) amplitude -= 4.0 * dt;
         }
 
-        if (currState->load() != RESIZING) {
+        if (audioState->load() != RESIZING) {
             progressBar = renderProgressBar(audioInfoWindow);
             displayAudioInfo(audioInfoWindow, appState);
         }
@@ -160,21 +182,13 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
-    if (ma_sound_at_end(&sound)) {
-        wmove(*audioInfoWindow, 2, 2);
-        wclrtoeol(*audioInfoWindow);
-        wprintw(*audioInfoWindow, "Status: Finished");
-        wrefresh(*audioInfoWindow);
-        refresh();
-    }
+    if (ma_sound_at_end(&sound)) appState->playNext = true;
+    else uninitializeAppState(appState);
 
-    uninitializeAppState(appState);
-    uninit();
-
-    return SUCCESS;
+    uninitializeMA();
 }
 
-void AudioManager::uninit() {
+void AudioManager::uninitializeMA() {
     ma_sound_uninit(&sound);
     ma_engine_uninit(&engine);
 }
