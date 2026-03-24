@@ -11,7 +11,7 @@ void initializeTerminal() {
 
     init_pair(1, COLOR_BLACK, COLOR_WHITE);
     init_pair(2, COLOR_BLACK, COLOR_GREEN);
-    init_pair(3, COLOR_RED, COLOR_WHITE);
+    init_pair(3, COLOR_WHITE, COLOR_RED);
     init_pair(4, COLOR_GREEN, 0);
 
     setlocale(LC_ALL, "");
@@ -40,12 +40,12 @@ void initializeWindows(WINDOW** fileWindow, WINDOW** audioInfoWindow) {
 void createBorder(WINDOW** window) {
     cchar_t vline, hline, ulc, urc, llc, lrc;
 
-    setcchar(&vline, L"║", A_NORMAL, 0, NULL);
-    setcchar(&hline, L"═", A_NORMAL, 0, NULL);
-    setcchar(&ulc,   L"╔", A_NORMAL, 0, NULL);
-    setcchar(&urc,   L"╗", A_NORMAL, 0, NULL);
-    setcchar(&llc,   L"╚", A_NORMAL, 0, NULL);
-    setcchar(&lrc,   L"╝", A_NORMAL, 0, NULL);
+    setcchar(&vline, L"║", WA_NORMAL, 0, NULL);
+    setcchar(&hline, L"═", WA_NORMAL, 0, NULL);
+    setcchar(&ulc,   L"╔", WA_NORMAL, 0, NULL);
+    setcchar(&urc,   L"╗", WA_NORMAL, 0, NULL);
+    setcchar(&llc,   L"╚", WA_NORMAL, 0, NULL);
+    setcchar(&lrc,   L"╝", WA_NORMAL, 0, NULL);
 
     wborder_set(*window, &vline, &vline, &hline, &hline, &ulc, &urc, &llc, &lrc);
 }

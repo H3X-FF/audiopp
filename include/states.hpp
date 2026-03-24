@@ -24,7 +24,7 @@ struct AppState {
     bool shouldRedraw;
     bool shouldRefreshFiles;
     bool shouldResize;
-    bool shouldClearCL;
+    bool inCommandMode;
 
     int playingIndex;
     int currSelectionIndex;

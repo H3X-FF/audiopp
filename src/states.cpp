@@ -13,6 +13,7 @@ void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
     appState.shouldRefreshFiles = true;
     appState.shouldResize = false;
+    appState.inCommandMode = false;
 
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;

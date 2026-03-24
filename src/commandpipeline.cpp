@@ -2,14 +2,34 @@
 #include <sstream>
 #include <vector>
 #include <unordered_map>
+#include <thread>
+#include <chrono>
 
 #include "runcommand.hpp"
 #include "commandpipeline.hpp"
+
+#include <bits/this_thread_sleep.h>
+
 #include "states.hpp"
 #include "ncursesw/ncurses.h"
 
+void CommandManager::validate::printError(std::string msg) {
+    move(LINES-1, 0);
+    clrtoeol();
+    attron(COLOR_PAIR(3));
+    printw("%s", msg.c_str());
+    refresh();
 
-void CommandManager::validate::handleCommand(const std::vector<std::string>& tokens) {
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // Temporary (maybe)
+
+    move(LINES-1, 0);
+    clrtoeol();
+    attroff(COLOR_PAIR(3));
+
+    refresh();
+}
+
+void CommandManager::validate::validateCommand(const std::vector<std::string>& tokens) {
     // Registry of available commands and their requirements
     static std::unordered_map<std::string, CommandProperties> commandRegistry{
         {"scan", {1, {"--move", "--copy", "--recurse"}, scan}}
@@ -19,11 +39,13 @@ void CommandManager::validate::handleCommand(const std::vector<std::string>& tok
 
     // Validate command existence
     if (commandRegistry.count(command) == 0) {
-        move(LINES-1, 0);
-        clrtoeol();
-        attron(COLOR_PAIR(3));
-        printw("Invalid command: %s", command.c_str());
-        attroff(COLOR_PAIR(3));
+        printError("Invalid Command: " + command);
+
+        return;
+    }
+
+    if (tokens.size() < 2) {
+        printError("Not enough arguments");
         return;
     }
 
@@ -39,11 +61,7 @@ void CommandManager::validate::handleCommand(const std::vector<std::string>& tok
             flags.push_back(tokens[i]);
         }
         else {
-            move(LINES-1, 0);
-            clrtoeol();
-            attron(COLOR_PAIR(3));
-            printw("Invalid flag: %s", tokens[i].c_str());
-            attroff(COLOR_PAIR(3));
+            printError("Invalid flag: " + tokens[i]);
             return;
         }
     }
@@ -63,12 +81,11 @@ void CommandManager::setUpCommand(std::string prompt, AppState& appState) {
     }
 
     std::string command{tokens[0]};
-    if (tokens.size() < 2) return;
 
     if (command == "scan") {
         appState.shouldRedraw = true;
         appState.shouldRefreshFiles = true;
     }
 
-    validate::handleCommand(tokens);
+    validate::validateCommand(tokens);
 }

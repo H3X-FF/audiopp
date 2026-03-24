@@ -125,6 +125,9 @@ AudioState AudioManager::playAudio(WINDOW** audioInfoWindow, char* file, std::at
 
     auto lastTime{std::chrono::high_resolution_clock::now()};
 
+    //----------------------------------------------------------------------------------------
+
+    // The audio thread settles in here. It performs action depending on the audio state
     while (currState->load() != STOPPED && !ma_sound_at_end(&sound)) {
 
         auto currentTime{std::chrono::high_resolution_clock::now()};

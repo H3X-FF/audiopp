@@ -50,22 +50,28 @@ int main() {
                     break;
 
                 case ':': // Enter Command Mode
-                    timeout(-1); // Switch to blocking input
+                    nodelay(stdscr, FALSE); // Switch to blocking input
                     echo();
                     move(LINES-1, 0);
                     bkgdset(A_REVERSE);
                     clrtoeol();
                     printw(":");
 
+                    appState.inCommandMode = true;
+
                     if (getnstr(command, sizeof(command)-1) == OK) {
+                        bkgdset(A_NORMAL);
+                        clrtoeol();
+
                         CommandManager::setUpCommand(command, appState);
                         command[0] = '\0';
                     }
 
-                    bkgdset(A_NORMAL);
-                    clrtoeol();
-                    timeout(100); // Revert to non-blocking
+                    nodelay(stdscr, TRUE);
                     noecho();
+
+                    appState.inCommandMode = false;
+
                     break;
 
                 case KEY_RESIZE:
@@ -110,8 +116,7 @@ int main() {
                 * as long as the state isn't STOPPED and the track hasn't ended
                 */
                 case '\n':
-                    if (appState.numberOfFiles == 0 ||
-                        (appState.isPlaying && appState.currSelectionIndex == appState.playingIndex)) break;
+                    if (appState.inCommandMode || appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
 
                     audioState.store(STOPPED);
                     char* audioPath{const_cast<char*>(audioFiles[appState.currSelectionIndex].c_str())};

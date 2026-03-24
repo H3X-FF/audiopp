@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <thread>
 
 #include "runcommand.hpp"
 #include "states.hpp"
@@ -20,8 +21,11 @@ namespace CommandManager {
             std::function<void(const std::vector<std::string>&, const std::vector<std::string>&)> action;
         };
 
+        extern std::thread errorThread;
+
+        void printError(std::string msg);
         /** @brief Validates and executes a command based on parsed tokens. */
-        void handleCommand(const std::vector<std::string>& tokens);
+        void validateCommand(const std::vector<std::string>& tokens);
     }
 
     /** @brief Entry point for processing user input from the TUI command line. */
