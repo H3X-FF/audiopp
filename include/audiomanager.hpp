@@ -80,6 +80,7 @@ class AudioManager {
 public:
     AudioManager();
 
+    /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread */
     void triggerAudioThread(WINDOW** infoWin, AppState* aState,
                                     std::atomic<AudioState>* audioAtomic, char* filePath);
 

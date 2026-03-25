@@ -29,10 +29,13 @@ void CommandManager::validate::printError(std::string msg) {
     refresh();
 }
 
-void CommandManager::validate::validateCommand(const std::vector<std::string>& tokens) {
+void CommandManager::validate::validateCommand(const std::vector<std::string>& tokens, AppState& appState) {
     // Registry of available commands and their requirements
     static std::unordered_map<std::string, CommandProperties> commandRegistry{
-        {"scan", {1, {"--move", "--copy", "--recurse"}, scan}}
+        {"scan", {1, {"--move", "--copy", "--recurse"}, scan}},
+        {"mv", {2, {}, mv}},
+        {"rm", {1, {}, rm}},
+        {"rename", {2, {}, rname}}
     };
 
     std::string command{tokens[0]};
@@ -41,11 +44,6 @@ void CommandManager::validate::validateCommand(const std::vector<std::string>& t
     if (commandRegistry.count(command) == 0) {
         printError("Invalid Command: " + command);
 
-        return;
-    }
-
-    if (tokens.size() < 2) {
-        printError("Not enough arguments");
         return;
     }
 
@@ -61,12 +59,17 @@ void CommandManager::validate::validateCommand(const std::vector<std::string>& t
             flags.push_back(tokens[i]);
         }
         else {
-            printError("Invalid flag: " + tokens[i]);
+            printError("Invalid arguments: " + tokens[i]);
             return;
         }
     }
 
-    commandRegistry[command].action(args, flags);
+    if (args.size() < commandRegistry[command].minArgs) {
+        printError("Not enough arguments");
+        return;
+    }
+
+    commandRegistry[command].action(args, flags, appState);
 }
 
 void CommandManager::setUpCommand(std::string prompt, AppState& appState) {
@@ -87,5 +90,5 @@ void CommandManager::setUpCommand(std::string prompt, AppState& appState) {
         appState.shouldRefreshFiles = true;
     }
 
-    validate::validateCommand(tokens);
+    validate::validateCommand(tokens, appState);
 }

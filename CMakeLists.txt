@@ -6,10 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
 
-file(GLOB NCURSESW_HEADERS NCURSES_LOCAL_DIR/ncursesw/include/*.h)
-file(GLOB NCURSESW_LIBS NCURSES_LOCAL_DIR/lib/*.a)
-
-if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR} AND ${NCURSESW_HEADERS} AMD ${NCURSESW_LIBS})
+if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR})
     execute_process(
             COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
@@ -35,7 +32,7 @@ set(SRC_FILES src/main.cpp
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE APP_PATH=\"${USR_HOME_DIR}/.local/audiopp\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_PATH=\"${USR_HOME_DIR}/.local/audiopp\")
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

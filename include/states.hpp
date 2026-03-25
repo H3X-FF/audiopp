@@ -29,6 +29,8 @@ struct AppState {
     bool playNext;
     bool playPrev;
 
+    std::vector<fs::path> audioFiles;
+
     int playingIndex;
     int currSelectionIndex;
     int numberOfFiles;

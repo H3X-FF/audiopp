@@ -111,6 +111,10 @@ void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState
     wrefresh(*audioInfoWindow);
 }
 
+/*
+* Plays audio and sets up the audio thread. It signals a stop first, checks if we can join the thread
+* so that if there's an active thread that thread exits the loop, resets states
+* then the new thread comes in and plays the new audio. */
 void AudioManager::triggerAudioThread(WINDOW** infoWin, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
     audioInfoWindow = infoWin;
     appState = aState;
@@ -124,13 +128,18 @@ void AudioManager::triggerAudioThread(WINDOW** infoWin, AppState* aState, std::a
     audioThread = std::thread(&AudioManager::playAndManageAudio, this);
 }
 
+
+// Initializes miniaudio. After initializing miniaudio, it will set the state to playing
 AudioState AudioManager::initializeMA() {
     ma_engine_init(NULL, &engine);
 
     initializingSoundRes = ma_sound_init_from_file(&engine, audioFile, 0, NULL, NULL, &sound);
     gettingLengthRes = ma_sound_get_length_in_seconds(&sound, &totalSeconds);
 
-    if (initializingSoundRes != MA_SUCCESS || gettingLengthRes != MA_SUCCESS) return FAILED;
+    if (initializingSoundRes != MA_SUCCESS || gettingLengthRes != MA_SUCCESS) {
+        audioState->store(STOPPED);
+        return FAILED;
+    }
 
     ma_sound_get_data_format(&sound, NULL, NULL, &sampleRate, NULL, 0);
 
@@ -140,11 +149,13 @@ AudioState AudioManager::initializeMA() {
     ma_sound_start(&sound);
 
     audioState->store(PLAYING);
+    appState->isPlaying = true;
     duration = getFullAudioDuration();
 
     return SUCCESS;
 }
 
+// Responsible
 void AudioManager::playAndManageAudio() {
     if (initializeMA() == FAILED) return;
 
@@ -184,7 +195,6 @@ void AudioManager::playAndManageAudio() {
              * It will already be considered at the end of the file, so by default playNext will be true.
              * ---------------------------------------------------------------------------------------------------------
              */
-
 
             ma_sound_seek_to_pcm_frame(&sound, newPos);
             audioState->store(PLAYING);

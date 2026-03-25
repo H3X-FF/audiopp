@@ -19,11 +19,8 @@ int main() {
 
     // Threading and State Management
     std::thread audioThread;
-    std::atomic<AudioState> audioState;
+    std::atomic<AudioState> audioState{STOPPED};
     AudioState prevAudioState;
-
-    std::vector<fs::path> audioFiles;
-
 
     // Debounce timer for resize events to prevent flickering/crashes
     std::chrono::time_point<std::chrono::steady_clock> lastResizeTime;
@@ -94,12 +91,12 @@ int main() {
 
                 case KEY_UP:
                     if (appState.currSelectionIndex > 0) appState.currSelectionIndex--;
-                    else appState.currSelectionIndex = audioFiles.size() - 1;
+                    else appState.currSelectionIndex = appState.audioFiles.size() - 1;
                     appState.shouldRedraw = true;
                     break;
 
                 case KEY_DOWN:
-                    if (appState.currSelectionIndex < audioFiles.size()-1) appState.currSelectionIndex++;
+                    if (appState.currSelectionIndex < appState.audioFiles.size()-1) appState.currSelectionIndex++;
                     else appState.currSelectionIndex = 0;
                     appState.shouldRedraw = true;
                     break;
@@ -116,24 +113,20 @@ int main() {
                     else audioState.store(PLAYING);
                     break;
 
-                /*
-                * Plays audio and manages the audio thread. It signals a stop first, checks if we can join the thread
-                * so that if there's an active thread that thread exits the loop, resets states
-                * then the new thread comes in and plays the new audio.
-                * The function that plays the audio will modify the state to PLAYING, and it will remain in that loop
-                * as long as the state isn't STOPPED and the track hasn't ended
-                */
+
                 case '\n':
                     if (appState.inCommandMode || appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
 
-                    char* audioFilePath{const_cast<char*>(audioFiles[appState.currSelectionIndex].c_str())};
+                    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
 
                     player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
 
-                    appState.playingIndex = appState.currSelectionIndex;
-                    appState.audioName = audioFiles[appState.playingIndex].filename();
-                    appState.isPlaying = true;
-                    appState.shouldRedraw = true;
+                    // If the audio started playing with no issues, it will set isPlaying to true
+                    if (appState.isPlaying) {
+                        appState.playingIndex = appState.currSelectionIndex;
+                        appState.audioName = appState.audioFiles[appState.playingIndex].filename();
+                        appState.shouldRedraw = true;
+                    }
                     break;
             }
         }
@@ -158,17 +151,20 @@ int main() {
             }
         }
 
+        // Automatically play next audio. I
         if (appState.playNext) {
             if (appState.playingIndex < appState.numberOfFiles - 1) appState.playingIndex++;
             else appState.playingIndex = 0;
 
-            char* audioFilePath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
+            char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
             player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
 
 
-            appState.audioName = audioFiles[appState.playingIndex].filename();
-            appState.isPlaying = true;
-            appState.shouldRedraw = true;
+            if (appState.isPlaying) {
+                appState.audioName = appState.audioFiles[appState.playingIndex].filename();
+                appState.isPlaying = true;
+                appState.shouldRedraw = true;
+            }
 
             appState.playNext = false;
         }
@@ -177,13 +173,14 @@ int main() {
             if (appState.playingIndex > 0) appState.playingIndex--;
             else appState.playingIndex = appState.numberOfFiles-1;
 
-            char* audioFilePath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
+            char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
             player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
 
-
-            appState.audioName = audioFiles[appState.playingIndex].filename();
-            appState.isPlaying = true;
-            appState.shouldRedraw = true;
+            if (appState.isPlaying) {
+                appState.audioName = appState.audioFiles[appState.playingIndex].filename();
+                appState.isPlaying = true;
+                appState.shouldRedraw = true;
+            }
 
             appState.playPrev = false;
         }
@@ -195,13 +192,13 @@ int main() {
          */
         if (appState.shouldRedraw) {
             if (appState.shouldRefreshFiles) {
-                audioFiles = getAudioFiles();
-                appState.numberOfFiles = audioFiles.size();
+                appState.audioFiles = getAudioFiles();
+                appState.numberOfFiles = appState.audioFiles.size();
 
                 // Helps maintain playing highlighter after refresh
                 if (appState.isPlaying) {
-                    for (int i{0}; i < audioFiles.size(); i++) {
-                        if (appState.audioName == audioFiles[i].filename()) {
+                    for (int i{0}; i < appState.audioFiles.size(); i++) {
+                        if (appState.audioName == appState.audioFiles[i].filename()) {
                             appState.playingIndex = i;
                             break;
                         }
@@ -211,7 +208,7 @@ int main() {
                 werase(fileWindow);
             }
 
-            displayFiles(fileWindow ,audioFiles, appState);
+            displayFiles(fileWindow ,appState.audioFiles, appState);
             appState.shouldRedraw = false;
 
             createBorder(&fileWindow);

@@ -18,14 +18,14 @@ namespace CommandManager {
         struct CommandProperties {
             size_t minArgs;
             std::vector<std::string> allowedFlags;
-            std::function<void(const std::vector<std::string>&, const std::vector<std::string>&)> action;
+            std::function<void(const std::vector<std::string>&, const std::vector<std::string>&, AppState& appState)> action;
         };
 
         extern std::thread errorThread;
 
         void printError(std::string msg);
         /** @brief Validates and executes a command based on parsed tokens. */
-        void validateCommand(const std::vector<std::string>& tokens);
+        void validateCommand(const std::vector<std::string>& tokens, AppState& appState);
     }
 
     /** @brief Entry point for processing user input from the TUI command line. */
