@@ -74,6 +74,14 @@ int main() {
 
                     break;
 
+                case '.': // seek forward
+                    audioState.store(SEEKING_FWD);
+                    break;
+
+                case ',': // seek backwards
+                    audioState.store(SEEKING_BWD);
+                    break;
+
                 case KEY_RESIZE:
                     // Temporarily pause UI updates in audio thread during resize
                     if (audioState.load() != RESIZING) {
@@ -118,9 +126,9 @@ int main() {
                 case '\n':
                     if (appState.inCommandMode || appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
 
-                    char* audioPath{const_cast<char*>(audioFiles[appState.currSelectionIndex].c_str())};
+                    char* audioFilePath{const_cast<char*>(audioFiles[appState.currSelectionIndex].c_str())};
 
-                    player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioPath);
+                    player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
 
                     appState.playingIndex = appState.currSelectionIndex;
                     appState.audioName = audioFiles[appState.playingIndex].filename();
@@ -154,8 +162,8 @@ int main() {
             if (appState.playingIndex < appState.numberOfFiles - 1) appState.playingIndex++;
             else appState.playingIndex = 0;
 
-            char* audioPath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
-            player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioPath);
+            char* audioFilePath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
+            player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
 
 
             appState.audioName = audioFiles[appState.playingIndex].filename();
@@ -163,6 +171,21 @@ int main() {
             appState.shouldRedraw = true;
 
             appState.playNext = false;
+        }
+
+        if (appState.playPrev) {
+            if (appState.playingIndex > 0) appState.playingIndex--;
+            else appState.playingIndex = appState.numberOfFiles-1;
+
+            char* audioFilePath{const_cast<char*>(audioFiles[appState.playingIndex].c_str())};
+            player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
+
+
+            appState.audioName = audioFiles[appState.playingIndex].filename();
+            appState.isPlaying = true;
+            appState.shouldRedraw = true;
+
+            appState.playPrev = false;
         }
 
         /* Redrawing is requested by the user navigating the files, refreshing the list, or playing audio.

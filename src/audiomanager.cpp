@@ -98,15 +98,12 @@ void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState
     wmove(*audioInfoWindow, 1, xPadding);
     wprintw(*audioInfoWindow, "Now Playing: %s", appState->audioName.c_str());
 
-    wmove(*audioInfoWindow, 2, xPadding);
-    wprintw(*audioInfoWindow, "Status: %s", status.c_str());
-
     formatElapsed();
 
-    wmove(*audioInfoWindow, 3, xPadding);
+    wmove(*audioInfoWindow, 2, xPadding);
     wprintw(*audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, duration.c_str());
 
-    wmove(*audioInfoWindow, 4, xPadding);
+    wmove(*audioInfoWindow, 3, xPadding);
     wprintw(*audioInfoWindow, "%s", progressBar.c_str());
 
     createBorder(audioInfoWindow);
@@ -136,6 +133,10 @@ AudioState AudioManager::initializeMA() {
     if (initializingSoundRes != MA_SUCCESS || gettingLengthRes != MA_SUCCESS) return FAILED;
 
     ma_sound_get_data_format(&sound, NULL, NULL, &sampleRate, NULL, 0);
+
+    totalFrames = totalSeconds * sampleRate;
+    frameOffset = 5 * sampleRate; // 5 seconds in frame
+
     ma_sound_start(&sound);
 
     audioState->store(PLAYING);
@@ -174,6 +175,32 @@ void AudioManager::playAndManageAudio() {
             if (amplitude > 0) amplitude -= 4.0 * dt;
         }
 
+        if (audioState->load() == SEEKING_FWD) {
+            ma_uint64 newPos{frameCursor + frameOffset};
+
+            /*
+             * ---------------------------------------------------------------------------------------------------------
+             * Note here: no need to check if the new seeked position is greater than the total frames within the audio.
+             * It will already be considered at the end of the file, so by default playNext will be true.
+             * ---------------------------------------------------------------------------------------------------------
+             */
+
+
+            ma_sound_seek_to_pcm_frame(&sound, newPos);
+            audioState->store(PLAYING);
+        }
+        else if (audioState->load() == SEEKING_BWD) {
+            ma_uint64 newPos = (frameCursor > frameOffset) ? (frameCursor - frameOffset) : 0;
+
+            /* while miniaudio will consider 'frameCursor < 0' at end of file
+             * due to the frameCursor having the value of a 64-bit unsigned integer, this is placed here so we can play
+             * the previous track instead of the default next track */
+            if (newPos == 0) appState->playPrev = true;
+
+            ma_sound_seek_to_pcm_frame(&sound, newPos);
+            audioState->store(PLAYING);
+        }
+
         if (audioState->load() != RESIZING) {
             progressBar = renderProgressBar(audioInfoWindow);
             displayAudioInfo(audioInfoWindow, appState);
@@ -182,8 +209,11 @@ void AudioManager::playAndManageAudio() {
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
-    if (ma_sound_at_end(&sound)) appState->playNext = true;
-    else uninitializeAppState(appState);
+    // The file being at the end and playPrev being false means that the user didn't seek backwards all the way (to the start of the track)
+    if (ma_sound_at_end(&sound) && !appState->playPrev) appState->playNext = true;
+    /* If neither are true, then that means the playing audio file hasn't reached the end,
+     * so we uninitialize the app state */
+    else if (!appState->playNext && !appState->playPrev) uninitializeAppState(appState);
 
     uninitializeMA();
 }

@@ -28,8 +28,11 @@ class AudioManager {
     ma_result gettingLengthRes;
     ma_result gettingFrameCursorsRes;
 
-    ma_uint64 frameCursor;
     ma_uint32 sampleRate;
+    ma_uint64 frameCursor;
+    ma_uint64 totalFrames;
+    ma_uint64 frameOffset;
+    ma_uint64 seekingPos;
 
     float totalSeconds;
     double remainingSeconds;

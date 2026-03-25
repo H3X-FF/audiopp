@@ -15,7 +15,8 @@ enum AudioState {
     STOPPED,  // User-requested termination
     PLAYING,  // Active playback
     PAUSED,   // Playback suspended
-    FINISHED  // Track reached end
+    SEEKING_FWD, // Seeks forward
+    SEEKING_BWD // Seeks backward
 };
 
 /** @brief Global application state including UI positions and track metadata. */
@@ -26,6 +27,7 @@ struct AppState {
     bool shouldResize;
     bool inCommandMode;
     bool playNext;
+    bool playPrev;
 
     int playingIndex;
     int currSelectionIndex;
