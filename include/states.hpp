@@ -26,7 +26,7 @@ struct AppState {
     bool shouldResize;
     bool inCommandMode;
     bool shouldPlayNext;
-    bool playPrev;
+    bool shouldPlayPrev;
 
     std::vector<fs::path> audioFiles;
 

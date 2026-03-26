@@ -129,7 +129,7 @@ int main() {
 
         if (appState.shouldPlayNext) playNext(audioInfoWindow, player, audioState, appState);
 
-        if (appState.playPrev) playPrevious(audioInfoWindow, player, audioState, appState);
+        if (appState.shouldPlayPrev) playPrevious(audioInfoWindow, player, audioState, appState);
 
         if (appState.shouldRefreshFiles) refreshFiles(fileWindow, appState);
 

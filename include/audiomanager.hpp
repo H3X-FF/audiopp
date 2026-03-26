@@ -21,13 +21,16 @@ class AudioManager {
     std::thread audioThread;
 
     ma_device device;
-    ma_device_config deviceConfig;
     ma_decoder decoder;
+    ma_device_config deviceConfig;
+    ma_decoder_config decoderConfig;
 
     // Results for error checking during initialization
     ma_result decoderInitRes;
     ma_result deviceInitRes;
     ma_result deviceStartRes;
+
+    ma_bool32 isSeekingFwd;
 
     ma_uint64 frameCursor;
     ma_uint64 totalFrames;
@@ -47,6 +50,9 @@ class AudioManager {
     std::string duration;
     std::string progressBar;
     std::string status;
+
+    /** @brief Miniaudio's low-level API. Static so it can gain access this class's private functions */
+    static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 
     /** @brief Converts total seconds into a MM:SS string format. */
     std::string getFullAudioDuration();

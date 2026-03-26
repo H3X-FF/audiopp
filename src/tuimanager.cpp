@@ -104,7 +104,7 @@ void playPrevious(WINDOW *&audioInfoWindow, AudioManager &player, std::atomic<Au
     appState.isPlaying = true;
     appState.shouldRedraw = true;
 
-    appState.playPrev = false;
+    appState.shouldPlayPrev = false;
 }
 
 std::vector<fs::path> getAudioFiles() {
