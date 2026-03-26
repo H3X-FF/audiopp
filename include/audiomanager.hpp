@@ -20,21 +20,20 @@ class AudioManager {
 
     std::thread audioThread;
 
-    ma_engine engine;
-    ma_sound sound;
+    ma_device device;
+    ma_device_config deviceConfig;
+    ma_decoder decoder;
 
     // Results for error checking during initialization
-    ma_result initializingSoundRes;
-    ma_result gettingLengthRes;
-    ma_result gettingFrameCursorsRes;
+    ma_result decoderInitRes;
+    ma_result deviceInitRes;
+    ma_result deviceStartRes;
 
-    ma_uint32 sampleRate;
     ma_uint64 frameCursor;
     ma_uint64 totalFrames;
     ma_uint64 frameOffset;
-    ma_uint64 seekingPos;
 
-    float totalSeconds;
+    double totalSeconds;
     double remainingSeconds;
     double totalElapsedTime;
 
@@ -55,14 +54,14 @@ class AudioManager {
     /** @brief Calculates current minutes/seconds from total elapsed time. */
     void formatElapsed();
 
-    /** @brief Updates the ncurses window with current track metadata. */
-    void displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState);
-
     /** @brief Generates a string representation of the playback progress. */
     std::string renderProgressBar(WINDOW** audioInfoWindow);
 
     /** @brief Renders a smooth traveling oscilloscope line. */
     void renderOscilloscope(WINDOW** audioInfoWindow);
+
+    /** @brief Updates the ncurses window with current track metadata. */
+    void displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState);
 
     /** @brief initializes the devices used by miniaudio. */
     AudioState initializeMA();

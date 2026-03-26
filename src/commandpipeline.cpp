@@ -83,12 +83,5 @@ void CommandManager::setUpCommand(std::string prompt, AppState& appState) {
         tokens.push_back(currToken);
     }
 
-    std::string command{tokens[0]};
-
-    if (command == "scan") {
-        appState.shouldRedraw = true;
-        appState.shouldRefreshFiles = true;
-    }
-
     validate::validateCommand(tokens, appState);
 }

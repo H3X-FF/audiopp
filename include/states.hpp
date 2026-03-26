@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <vector>
 #include <string>
-#include "ncursesw/ncurses.h"
 
 namespace fs = std::filesystem;
 
@@ -26,7 +25,7 @@ struct AppState {
     bool shouldRefreshFiles;
     bool shouldResize;
     bool inCommandMode;
-    bool playNext;
+    bool shouldPlayNext;
     bool playPrev;
 
     std::vector<fs::path> audioFiles;
@@ -37,12 +36,3 @@ struct AppState {
 
     std::string audioName;
 };
-
-/** @brief Sets default values for the AppState. */
-void initializeAppState(AppState& appState);
-
-/** @brief Scans the designated audio directory for .wav files. */
-std::vector<fs::path> getAudioFiles();
-
-/** @brief Renders the list of files to the file window with highlighting. */
-void displayFiles(WINDOW* fileWindow, std::vector<fs::path> audioFiles, AppState appState);

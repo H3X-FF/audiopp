@@ -7,8 +7,6 @@
 
 #include "commandpipeline.hpp"
 #include "runcommand.hpp"
-#include "ncursesw/curses.h"
-
 namespace fs = std::filesystem;
 
 namespace {
@@ -81,7 +79,6 @@ namespace {
             else renameFile(srcIdx, dest, appState);
 
             appState.shouldRefreshFiles = true;
-            appState.shouldRedraw = true;
 
             return;
         }
@@ -110,7 +107,6 @@ namespace {
         }
 
         appState.shouldRefreshFiles = true;
-        appState.shouldRedraw = true;
     }
 
 }
@@ -148,7 +144,6 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
     }
 
     appState.shouldRefreshFiles = true;
-    appState.shouldRedraw = true;
 }
 
 void mv(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState& appState) {
