@@ -128,43 +128,49 @@ void AudioManager::triggerAudioThread(WINDOW** infoWin, AppState* aState, std::a
     audioThread = std::thread(&AudioManager::playAndManageAudio, this);
 }
 
-/* A function used by miniaudio for delivering real-time PCM data. */
 void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     AudioManager* pManager{static_cast<AudioManager*>(pDevice->pUserData)};
     AudioState currentState = pManager->audioState->load();
 
-    if (currentState == SEEKING_FWD) {
+    // If total frames were to be zero, then that means the file hasn't loaded yet
+    if (currentState == SEEKING_FWD && pManager->totalFrames != 0) {
         ma_uint32 bytesPerFrame = ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels);
-        memset(pOutput, 0, frameCount * bytesPerFrame);
+        memset(pOutput, 0, frameCount * bytesPerFrame); // Clearing the buffer to avoid a weird glitch sound
 
         ma_uint64 newPos = pManager->frameCursor + pManager->frameOffset;
 
         if (newPos >= pManager->totalFrames) {
             pManager->appState->shouldPlayNext = true;
-            pManager->audioState->store(STOPPED); // Signal loop to exit
-        } else {
-            ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
-            pManager->audioState->store(PLAYING);
+            pManager->audioState->store(STOPPED);
+            return;
         }
+
+        ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
+        pManager->audioState->store(PLAYING);
     }
 
-    if (currentState == SEEKING_BWD) {
+    // If total frames were to be zero, then that means the file hasn't loaded yet
+    if (currentState == SEEKING_BWD && pManager->totalFrames != 0) {
         ma_uint32 bytesPerFrame = ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels);
-        memset(pOutput, 0, frameCount * bytesPerFrame);
+        memset(pOutput, 0, frameCount * bytesPerFrame); // Clearing the buffer to avoid a weird glitch sound
 
-        // Check for underflow safely
         if (pManager->frameCursor <= pManager->frameOffset) {
             // We are within the first 5 seconds, trigger Previous Track
             pManager->appState->shouldPlayPrev = true;
             pManager->audioState->store(STOPPED); // Signal loop to exit
-        } else {
-            ma_uint64 newPos = pManager->frameCursor - pManager->frameOffset;
-            ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
-            pManager->audioState->store(PLAYING);
+            return; // Don't read frames when at start
         }
+
+        ma_uint64 newPos = pManager->frameCursor - pManager->frameOffset;
+        ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
+        pManager->audioState->store(PLAYING);
+
     }
 
-    ma_decoder_read_pcm_frames(&pManager->decoder, pOutput, frameCount, NULL);
+    // Only read frames if not stopped
+    if (pManager->audioState->load() != STOPPED) {
+        ma_decoder_read_pcm_frames(&pManager->decoder, pOutput, frameCount, NULL);
+    }
 }
 
 // Initializes miniaudio. After initializing miniaudio, it will set the state to playing
@@ -179,6 +185,10 @@ AudioState AudioManager::initializeMA() {
         audioState->store(STOPPED);
         return FAILED;
     }
+
+    // Reset playback position for new file
+    frameCursor = 0;
+    totalFrames = 0;
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format = decoder.outputFormat;
@@ -226,7 +236,6 @@ void AudioManager::playAndManageAudio() {
 
     // The audio thread settles in here. It performs action depending on the audio state.
     while (audioState->load() != STOPPED && frameCursor < totalFrames) {
-
         auto currentTime{std::chrono::high_resolution_clock::now()};
         double dt{std::chrono::duration<double>(currentTime - lastTime).count()};
         lastTime = currentTime;
@@ -259,16 +268,14 @@ void AudioManager::playAndManageAudio() {
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
-    // The file being at the end and playPrev being false means that the user didn't seek backwards all the way (to the start of the track)
-    if (frameCursor >= totalFrames && !appState->shouldPlayPrev) appState->shouldPlayNext = true;
-    /* If neither are true, then that means the playing audio file hasn't reached the end,
-     * so we uninitialize the app state */
+    if (frameCursor >= totalFrames && !appState->shouldPlayPrev && !appState->shouldPlayNext) appState->shouldPlayNext = true;
     else if (!appState->shouldPlayNext && !appState->shouldPlayPrev) uninitializeAppState(appState);
 
     uninitializeMA();
 }
 
 void AudioManager::uninitializeMA() {
+    ma_device_stop(&device);
     ma_device_uninit(&device);
     ma_decoder_uninit(&decoder);
 }

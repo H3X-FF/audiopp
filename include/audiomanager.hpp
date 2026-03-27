@@ -51,7 +51,7 @@ class AudioManager {
     std::string progressBar;
     std::string status;
 
-    /** @brief Miniaudio's low-level API. Static so it can gain access this class's private functions */
+    /** @brief A function used by miniaudio's low-level API for delivering real-time PCM data. */
     static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 
     /** @brief Converts total seconds into a MM:SS string format. */
