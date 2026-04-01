@@ -4,19 +4,19 @@
 #include <string>
 #include <thread>
 
-#include "miniaudio/miniaudio.h"
+#include <miniaudio/miniaudio.h>
+
 #include "states.hpp"
-#include "ncursesw/ncurses.h"
 
 /**
  * @class AudioManager
- * @brief Handles audio initialization, playback, and TUI info rendering.
+ * @brief Handles audio initialization, playback, and writes display state.
  */
 class AudioManager {
-    WINDOW** audioInfoWindow;
     char* audioFile;
     std::atomic<AudioState>* audioState;
     AppState* appState;
+    AudioDisplayState* displayState;
 
     std::thread audioThread;
 
@@ -40,17 +40,6 @@ class AudioManager {
     double remainingSeconds;
     double totalElapsedTime;
 
-    int elapsedMinutes;
-    int elapsedSeconds;
-
-    int maxAmplitude;
-    double amplitude;
-    double visTimer;
-
-    std::string duration;
-    std::string progressBar;
-    std::string status;
-
     /** @brief A function used by miniaudio's low-level API for delivering real-time PCM data. */
     static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 
@@ -59,15 +48,6 @@ class AudioManager {
 
     /** @brief Calculates current minutes/seconds from total elapsed time. */
     void formatElapsed();
-
-    /** @brief Generates a string representation of the playback progress. */
-    std::string renderProgressBar(WINDOW** audioInfoWindow);
-
-    /** @brief Renders a smooth traveling oscilloscope line. */
-    void renderOscilloscope(WINDOW** audioInfoWindow);
-
-    /** @brief Updates the ncurses window with current track metadata. */
-    void displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState);
 
     /** @brief initializes the devices used by miniaudio. */
     AudioState initializeMA();
@@ -83,11 +63,14 @@ class AudioManager {
 
 
 public:
-    AudioManager();
 
-    /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread */
-    void triggerAudioThread(WINDOW** infoWin, AppState* aState,
+    /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
+     *  Writes audio display info to displayState for the TUI to render. */
+    void triggerAudioThread(AudioDisplayState* dState, AppState* aState,
                                     std::atomic<AudioState>* audioAtomic, char* filePath);
 
     void terminateAudioThread();
+
+    void playNext(std::atomic<AudioState>& audioState, AppState& appState);
+    void playPrevious(std::atomic<AudioState> &audioState, AppState &appState);
 };

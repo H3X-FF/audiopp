@@ -5,13 +5,12 @@
 #include <thread>
 #include <chrono>
 
+#include <ncursesw/ncurses.h>
+
 #include "runcommand.hpp"
 #include "commandpipeline.hpp"
 
-#include <bits/this_thread_sleep.h>
-
 #include "states.hpp"
-#include "ncursesw/ncurses.h"
 
 void CommandManager::validate::printError(std::string msg) {
     move(LINES-1, 0);

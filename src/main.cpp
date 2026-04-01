@@ -3,10 +3,11 @@
 #include <vector>
 #include <filesystem>
 
+#include <ncursesw/ncurses.h>
+
 #include "states.hpp"
 #include "audiomanager.hpp"
-#include "tuimanager.hpp"
-#include "ncursesw/ncurses.h"
+#include "ui.hpp"
 #include "commandpipeline.hpp"
 
 
@@ -28,8 +29,9 @@ int main() {
     char command[80];
 
     initializeTerminal();
-    initializeWindows(&fileWindow, &audioInfoWindow);
+    initializeWindows(fileWindow, audioInfoWindow);
     initializeAppState(appState);
+    initializeAudioDisplayState(appState.audioDisplay);
 
     while (running) {
         int ch{getch()};
@@ -114,7 +116,7 @@ int main() {
 
                     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
 
-                    player.triggerAudioThread(&audioInfoWindow, &appState, &audioState, audioFilePath);
+                    player.triggerAudioThread(&appState.audioDisplay, &appState, &audioState, audioFilePath);
 
                     appState.playingIndex = appState.currSelectionIndex;
                     appState.audioName = appState.audioFiles[appState.playingIndex].filename();
@@ -127,11 +129,13 @@ int main() {
 
         if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioState, prevAudioState, appState, lastTime);
 
-        if (appState.shouldPlayNext) playNext(audioInfoWindow, player, audioState, appState);
+        if (appState.shouldPlayNext) player.playNext(audioState, appState);
 
-        if (appState.shouldPlayPrev) playPrevious(audioInfoWindow, player, audioState, appState);
+        if (appState.shouldPlayPrev) player.playPrevious(audioState, appState);
 
         if (appState.shouldRefreshFiles) refreshFiles(fileWindow, appState);
+
+        if (appState.audioDisplay.shouldRedraw) displayAudioInfo(audioInfoWindow, appState.audioDisplay);
 
         if (appState.shouldRedraw) redrawScreen(fileWindow, audioInfoWindow, appState);
     }

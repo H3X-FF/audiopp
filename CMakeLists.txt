@@ -26,7 +26,7 @@ set(USR_HOME_DIR $ENV{HOME})
 set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
         src/states.cpp
-        src/tuimanager.cpp
+        src/ui.cpp
         src/commandpipeline.cpp
         src/runcommand.cpp)
 

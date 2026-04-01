@@ -7,31 +7,22 @@
 #include <cmath>
 
 #define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio/miniaudio.h"
-#include "ncursesw/ncurses.h"
+#include <miniaudio/miniaudio.h>
+
 #include "audiomanager.hpp"
 #include "states.hpp"
-#include "tuimanager.hpp"
 
 void AudioManager::terminateAudioThread() {
     audioState->store(STOPPED);
     if (audioThread.joinable()) audioThread.join();
 }
-
-AudioManager::AudioManager() {
-    totalElapsedTime = 0;
-
-    maxAmplitude = 6;
-    amplitude = 0.0;
-    visTimer = 0.0;
-}
-
 // Resets UI-related playback state when audio stops.
-void uninitializeAppState(AppState* appState) {
+void uninitializeAppState(AppState* appState, AudioDisplayState* displayState) {
     appState->isPlaying = false;
     appState->playingIndex = -1;
     appState->audioName = "";
-    appState->shouldRedraw = true;
+
+    displayState->shouldRedraw = true;
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -44,79 +35,19 @@ std::string AudioManager::getFullAudioDuration() {
 }
 
 void AudioManager::formatElapsed() {
-    elapsedMinutes = static_cast<int>(totalElapsedTime) / 60;
-    elapsedSeconds = static_cast<int>(totalElapsedTime) % 60;
-}
+    int elapsedMinutes = static_cast<int>(totalElapsedTime) / 60;
+    int elapsedSeconds = static_cast<int>(totalElapsedTime) % 60;
 
-std::string AudioManager::renderProgressBar(WINDOW** audioInfoWindow) {
-    int padding{10};
-    int barWidth{getmaxx(*audioInfoWindow) - padding};
-    double progress{totalSeconds > 0 ? totalElapsedTime / totalSeconds : 0};
-    double filled{progress * barWidth};
-
-    std::string bar{"["};
-    for (int i{0}; i < barWidth; i++) {
-        if (i < filled) bar += '#';
-        else bar += '-';
-    }
-    bar += ']';
-
-    return bar;
-}
-
-void AudioManager::renderOscilloscope(WINDOW** audioInfoWindow) {
-    int winHeight, winWidth;
-    getmaxyx(*audioInfoWindow, winHeight, winWidth);
-
-    int centerY = winHeight / 2;
-    double frequency = 0.1;
-
-    wattron(*audioInfoWindow, COLOR_PAIR(4));
-
-    for (int x = 0; x < winWidth; x++) {
-        double sineVal = std::sin((x * frequency) - visTimer);
-
-        double harmonic = std::sin((x * frequency * 2.5) + (visTimer * 0.5)) * 0.3;
-
-        int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * amplitude);
-        int finalY = centerY + yOffset;
-
-        if (finalY > 0 && finalY < winHeight - 1) mvwaddwstr(*audioInfoWindow, finalY, x, L"━");
-
-    }
-
-    wattroff(*audioInfoWindow, COLOR_PAIR(4));
-}
-
-void AudioManager::displayAudioInfo(WINDOW** audioInfoWindow, AppState* appState) {
-    int xPadding{2};
-
-    werase(*audioInfoWindow);
-
-    renderOscilloscope(audioInfoWindow);
-
-    wmove(*audioInfoWindow, 1, xPadding);
-    wprintw(*audioInfoWindow, "Now Playing: %s", appState->audioName.c_str());
-
-    formatElapsed();
-
-    wmove(*audioInfoWindow, 2, xPadding);
-    wprintw(*audioInfoWindow, "Time: %d:%02d/%s", elapsedMinutes, elapsedSeconds, duration.c_str());
-
-    wmove(*audioInfoWindow, 3, xPadding);
-    wprintw(*audioInfoWindow, "%s", progressBar.c_str());
-
-    createBorder(audioInfoWindow);
-
-    wrefresh(*audioInfoWindow);
+    displayState->elapsedMinutes = elapsedMinutes;
+    displayState->elapsedSeconds = elapsedSeconds;
 }
 
 /*
 * Plays audio and sets up the audio thread. It signals a stop first, checks if we can join the thread
 * so that if there's an active thread that thread exits the loop, resets states
 * then the new thread comes in and plays the new audio. */
-void AudioManager::triggerAudioThread(WINDOW** infoWin, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
-    audioInfoWindow = infoWin;
+void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
+    displayState = dState;
     appState = aState;
     audioState = audioAtomic;
     audioFile = filePath;
@@ -173,7 +104,7 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
     }
 }
 
-// Initializes miniaudio. After initializing miniaudio, it will set the state to playing
+// Initializes miniaudio. After initializing miniaudio, it will set the state to playing.
 AudioState AudioManager::initializeMA() {
 
     decoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
@@ -218,11 +149,16 @@ AudioState AudioManager::initializeMA() {
     ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
     totalSeconds = static_cast<double>(totalFrames) / deviceConfig.sampleRate;
 
+    totalElapsedTime = 0;
+
     frameOffset = 5 * deviceConfig.sampleRate; // 5 seconds in frame
 
     audioState->store(PLAYING);
     appState->isPlaying = true;
-    duration = getFullAudioDuration();
+
+    displayState->audioName = appState->audioName;
+    displayState->duration = getFullAudioDuration();
+    displayState->shouldRedraw = true;
 
     return SUCCESS;
 }
@@ -231,6 +167,8 @@ void AudioManager::playAndManageAudio() {
     if (initializeMA() == FAILED) return;
 
     frameCursor = 0;
+    double amplitude = 0.0;
+    double visTimer = 0.0;
 
     auto lastTime{std::chrono::high_resolution_clock::now()};
 
@@ -250,26 +188,28 @@ void AudioManager::playAndManageAudio() {
         // Handling the visualizer by making a smooth fade in/fade out depending on state
         if (audioState->load() == PLAYING) {
             ma_device_start(&device);
-            status = "Playing";
             if (amplitude < 1.0) amplitude += 4.0 * dt;
         }
         else if (audioState->load() == PAUSED) {
             ma_device_stop(&device);
-            status = "Paused";
             if (amplitude > 0) amplitude -= 4.0 * dt;
         }
 
-
+        // Update display state (but skip during resize to avoid flickering)
         if (audioState->load() != RESIZING) {
-            progressBar = renderProgressBar(audioInfoWindow);
-            displayAudioInfo(audioInfoWindow, appState);
+            formatElapsed();
+            displayState->totalSeconds = totalSeconds;
+            displayState->totalElapsedTime = totalElapsedTime;
+            displayState->amplitude = amplitude;
+            displayState->visTimer = visTimer;
+            displayState->shouldRedraw = true;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
     if (frameCursor >= totalFrames && !appState->shouldPlayPrev && !appState->shouldPlayNext) appState->shouldPlayNext = true;
-    else if (!appState->shouldPlayNext && !appState->shouldPlayPrev) uninitializeAppState(appState);
+    else if (!appState->shouldPlayNext && !appState->shouldPlayPrev) uninitializeAppState(appState, displayState);
 
     uninitializeMA();
 }
@@ -278,4 +218,33 @@ void AudioManager::uninitializeMA() {
     ma_device_stop(&device);
     ma_device_uninit(&device);
     ma_decoder_uninit(&decoder);
+}
+
+void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appState) {
+    if (appState.playingIndex < appState.numberOfFiles - 1) appState.playingIndex++;
+    else appState.playingIndex = 0;
+
+    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
+    this->triggerAudioThread(&appState.audioDisplay, &appState, &audioState, audioFilePath);
+
+
+    appState.audioName = appState.audioFiles[appState.playingIndex].filename();
+    appState.isPlaying = true;
+    appState.shouldRedraw = true;
+
+    appState.shouldPlayNext = false;
+}
+
+void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &appState) {
+    if (appState.playingIndex > 0) appState.playingIndex--;
+    else appState.playingIndex = appState.numberOfFiles-1;
+
+    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
+    this->triggerAudioThread(&appState.audioDisplay, &appState, &audioState, audioFilePath);
+
+    appState.audioName = appState.audioFiles[appState.playingIndex].filename();
+    appState.isPlaying = true;
+    appState.shouldRedraw = true;
+
+    appState.shouldPlayPrev = false;
 }
