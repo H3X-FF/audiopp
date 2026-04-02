@@ -72,10 +72,12 @@ int main() {
                     break;
 
                 case '.': // seek forward
+                    if (audioState.load() == PAUSED) player.pausedWhileSeeking = true;
                     audioState.store(SEEKING_FWD);
                     break;
 
                 case ',': // seek backwards
+                    if (audioState.load() == PAUSED) player.pausedWhileSeeking = true;
                     audioState.store(SEEKING_BWD);
                     break;
 
@@ -129,14 +131,13 @@ int main() {
 
                 case ' ': // Playback toggle
                     if (audioState.load() == STOPPED) break;
-                    appState.isPlaying = !appState.isPlaying;
                     if (audioState.load() == PLAYING) audioState.store(PAUSED);
                     else audioState.store(PLAYING);
                     break;
 
 
                 case '\n':
-                    if (appState.inCommandMode || appState.isPlaying && appState.currSelectionIndex == appState.playingIndex) break;
+                    if (appState.inCommandMode || appState.currSelectionIndex == appState.playingIndex) break;
 
                     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
 

@@ -37,7 +37,6 @@ struct AudioDisplayState {
 
 /** @brief Global application state including UI positions and track metadata. */
 struct AppState {
-    bool isPlaying;
     bool shouldRedraw;
     bool shouldRefreshFiles;
     bool shouldResize;

@@ -18,7 +18,6 @@ void AudioManager::terminateAudioThread() {
 }
 // Resets UI-related playback state when audio stops.
 void uninitializeAppState(AppState* appState, AudioDisplayState* displayState) {
-    appState->isPlaying = false;
     appState->playingIndex = -1;
     appState->audioName = "";
 
@@ -63,6 +62,16 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
     AudioManager* pManager{static_cast<AudioManager*>(pDevice->pUserData)};
     AudioState currentState = pManager->audioState->load();
 
+
+    if (currentState == PAUSED) {
+        // Clearing the buffer here for miniaudio to continue reading data but without playing the actual audio.
+        // Reason for this approach to pause is just to allow seeking while paused. Using ma_device_stop() stops data_callback
+        // which ends up blocking seeking while paused.
+        ma_uint32 bytesPerFrame = ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels);
+        memset(pOutput, 0, frameCount * bytesPerFrame);
+        return;
+    }
+
     // If total frames were to be zero, then that means the file hasn't loaded yet
     if (currentState == SEEKING_FWD && pManager->totalFrames != 0) {
         ma_uint32 bytesPerFrame = ma_get_bytes_per_frame(pDevice->playback.format, pDevice->playback.channels);
@@ -77,7 +86,8 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
         }
 
         ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
-        pManager->audioState->store(PLAYING);
+        pManager->audioState->store(pManager->pausedWhileSeeking ? PAUSED : PLAYING);
+        pManager->pausedWhileSeeking = false;
     }
 
     // If total frames were to be zero, then that means the file hasn't loaded yet
@@ -94,12 +104,13 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
 
         ma_uint64 newPos = pManager->frameCursor - pManager->frameOffset;
         ma_decoder_seek_to_pcm_frame(&pManager->decoder, newPos);
-        pManager->audioState->store(PLAYING);
+        pManager->audioState->store(pManager->pausedWhileSeeking ? PAUSED : PLAYING);
+        pManager->pausedWhileSeeking = false;
 
     }
 
     // Only read frames if not stopped
-    if (pManager->audioState->load() != STOPPED) {
+    if (pManager->audioState->load() == PLAYING) {
         ma_decoder_read_pcm_frames(&pManager->decoder, pOutput, frameCount, NULL);
     }
 }
@@ -153,8 +164,8 @@ AudioState AudioManager::initializeMA() {
 
     frameOffset = 5 * deviceConfig.sampleRate; // 5 seconds in frame
 
+    pausedWhileSeeking = false;
     audioState->store(PLAYING);
-    appState->isPlaying = true;
 
     displayState->audioName = appState->audioName;
     displayState->duration = getFullAudioDuration();
@@ -191,7 +202,7 @@ void AudioManager::playAndManageAudio() {
             if (amplitude < 1.0) amplitude += 4.0 * dt;
         }
         else if (audioState->load() == PAUSED) {
-            ma_device_stop(&device);
+            // NOTE: The actual pause happens in data_callback()
             if (amplitude > 0) amplitude -= 4.0 * dt;
         }
 
@@ -229,7 +240,6 @@ void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appSt
 
 
     appState.audioName = appState.audioFiles[appState.playingIndex].filename();
-    appState.isPlaying = true;
     appState.shouldRedraw = true;
 
     appState.shouldPlayNext = false;
@@ -243,7 +253,6 @@ void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &a
     this->triggerAudioThread(&appState.audioDisplay, &appState, &audioState, audioFilePath);
 
     appState.audioName = appState.audioFiles[appState.playingIndex].filename();
-    appState.isPlaying = true;
     appState.shouldRedraw = true;
 
     appState.shouldPlayPrev = false;

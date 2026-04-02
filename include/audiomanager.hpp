@@ -63,6 +63,7 @@ class AudioManager {
 
 
 public:
+    bool pausedWhileSeeking;
 
     /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
      *  Writes audio display info to displayState for the TUI to render. */

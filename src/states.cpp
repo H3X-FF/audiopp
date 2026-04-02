@@ -2,7 +2,6 @@
 #include <algorithm>
 
 void initializeAppState(AppState& appState) {
-    appState.isPlaying = false;
     appState.shouldRedraw = true;
     appState.shouldRefreshFiles = true;
     appState.shouldResize = false;

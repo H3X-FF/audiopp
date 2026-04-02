@@ -98,7 +98,7 @@ void displayFiles(WINDOW*& fileWindow, AppState& appState) {
 
         if (currentItem < appState.numberOfFiles) {
             if (currentItem == appState.currSelectionIndex) pair = 1;
-            else if (appState.isPlaying && currentItem == appState.playingIndex) pair = 2;
+            else if (currentItem == appState.playingIndex) pair = 2;
 
             wbkgdset(fileWindow, COLOR_PAIR(pair));
             wclrtoeol(fileWindow);
@@ -134,7 +134,7 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
     appState.numberOfFiles = appState.audioFiles.size();
 
     // Helps maintain playing highlighter after refresh
-    if (appState.isPlaying) {
+    if (appState.playingIndex != -1) {
         for (int i = 0; i < appState.audioFiles.size(); i++) {
             if (appState.audioName == appState.audioFiles[i].filename()) {
                 appState.playingIndex = i;
@@ -178,12 +178,27 @@ namespace {
         int leftSidePadding = 2;
         int yPos = 3;
         int barWidth = windowWidth - rightSidePadding;
+
         double progress = displayState.totalSeconds > 0 ? displayState.totalElapsedTime / displayState.totalSeconds : 0;
         double filled = progress * barWidth;
+
+        int fullBlocks = static_cast<int>(filled);
+        double remainder = filled = fullBlocks;
+
+        const wchar_t* partials[] = {L"▏", L"▎", L"▍", L"▌", L"▋", L"▊", L"▉"};
         
         for (int i = 0; i < barWidth; i++) {
-            if (i < filled) mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"█");
-            else mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"▒");
+            if (i < fullBlocks) {
+                mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"█");
+            }
+            else if (i == fullBlocks && remainder > 0.1) {
+                int block = static_cast<int>(remainder * 7);
+                if (block > 6) block = 6;
+                mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, partials[block]);
+            }
+            else {
+                mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"▒");
+            }
         }
 
     }
