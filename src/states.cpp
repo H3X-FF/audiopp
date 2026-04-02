@@ -10,6 +10,7 @@ void initializeAppState(AppState& appState) {
     appState.shouldPlayNext = false;
     appState.shouldPlayPrev = false;
 
+    appState.topIndex = 0;
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;

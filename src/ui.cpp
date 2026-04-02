@@ -17,9 +17,9 @@ void initializeTerminal() {
 
 
     init_pair(1, COLOR_BLACK, COLOR_WHITE);
-    init_pair(2, COLOR_BLACK, COLOR_GREEN);
+    init_pair(2, COLOR_WHITE, COLOR_BLUE);
     init_pair(3, COLOR_WHITE, COLOR_RED);
-    init_pair(4, COLOR_GREEN, 0);
+    init_pair(4, COLOR_BLUE, 0);
 
     curs_set(0);
     keypad(stdscr, TRUE);
@@ -28,48 +28,52 @@ void initializeTerminal() {
     nodelay(stdscr, TRUE);
 }
 
-void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow) {
+void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow) {
     int terminalHeight;
     int terminalWidth;
 
     getmaxyx(stdscr, terminalHeight, terminalWidth);
 
-    int height{terminalHeight - 4};
-    int width{terminalWidth/2 - 1};
+    int leftWinWidth = terminalWidth/2;
+    int rightWinWidth = terminalWidth - leftWinWidth;
+    int midWinHeight = terminalHeight / 2;
 
-    // Split screen vertically into two equal halves
-    fileWindow = newwin(height, width, 0, 0);
-    audioInfoWindow = newwin(height, width, 0, terminalWidth/2);
+    fileWindow = newwin(terminalHeight, leftWinWidth, 0, 0);
+    audioInfoWindow = newwin(midWinHeight, rightWinWidth, 0, leftWinWidth);
+    audioVisualWindow = newwin(terminalHeight - midWinHeight, rightWinWidth, midWinHeight, leftWinWidth);
+
+    scrollok(fileWindow, FALSE);
 }
 
 void createBorder(WINDOW*& window) {
     cchar_t vline, hline, ulc, urc, llc, lrc;
 
-    setcchar(&vline, L"║", WA_NORMAL, 0, NULL);
-    setcchar(&hline, L"═", WA_NORMAL, 0, NULL);
-    setcchar(&ulc,   L"╔", WA_NORMAL, 0, NULL);
-    setcchar(&urc,   L"╗", WA_NORMAL, 0, NULL);
-    setcchar(&llc,   L"╚", WA_NORMAL, 0, NULL);
-    setcchar(&lrc,   L"╝", WA_NORMAL, 0, NULL);
+    setcchar(&vline, L"│", WA_NORMAL, 0, NULL);
+    setcchar(&hline, L"─", WA_NORMAL, 0, NULL);
+    setcchar(&ulc,   L"╭", WA_NORMAL, 0, NULL);
+    setcchar(&urc,   L"╮", WA_NORMAL, 0, NULL);
+    setcchar(&llc,   L"╰", WA_NORMAL, 0, NULL);
+    setcchar(&lrc,   L"╯", WA_NORMAL, 0, NULL);
 
     wborder_set(window, &vline, &vline, &hline, &hline, &ulc, &urc, &llc, &lrc);
 }
 
-void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow,
+void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
     std::atomic<AudioState>& audioState, AudioState& prevAudioState,
     AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime) {
 
-    auto now{std::chrono::steady_clock::now()};
+    auto now = std::chrono::steady_clock::now();
     if (now - lastTime >= std::chrono::milliseconds(150)) {
         if (fileWindow) delwin(fileWindow);
         if (audioInfoWindow) delwin(audioInfoWindow);
+        if (audioVisualWindow) delwin(audioVisualWindow);
 
         // Hard reset ncurses to recalculate internal terminal dimensions
         endwin();
         refresh();
         clear();
 
-        initializeWindows(fileWindow, audioInfoWindow);
+        initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
 
         appState.shouldResize = false;
         appState.shouldRedraw = true;
@@ -78,30 +82,49 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow,
 
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+
 void displayFiles(WINDOW*& fileWindow, AppState& appState) {
     int pair;
+    int fileWindowHeight = getmaxy(fileWindow) - 2;
 
-    for (int i{0}; i < appState.audioFiles.size(); i++) {
+    for (int i{0}; i < fileWindowHeight; i++) {
+        int currentItem = appState.topIndex + i;
         pair = 0;
 
-        if (i == appState.currSelectionIndex) pair = 1;
-        else if (appState.isPlaying && i == appState.playingIndex) pair = 2;
+        wmove(fileWindow, i+1, 1);
 
-        wattron(fileWindow, COLOR_PAIR(pair));
-        mvwprintw(fileWindow, i+1, 2, "%d. %s\n", i+1, appState.audioFiles[i].filename().c_str());
-        wattroff(fileWindow, COLOR_PAIR(pair));
+        if (currentItem < appState.numberOfFiles) {
+            if (currentItem == appState.currSelectionIndex) pair = 1;
+            else if (appState.isPlaying && currentItem == appState.playingIndex) pair = 2;
+
+            wbkgdset(fileWindow, COLOR_PAIR(pair));
+            wclrtoeol(fileWindow);
+            mvwprintw(fileWindow, i+1, 2, "%d. %s", currentItem+1, appState.audioFiles[currentItem].filename().c_str());
+            wbkgdset(fileWindow, A_NORMAL);
+        }
+        else {
+            wbkgdset(fileWindow, A_NORMAL);
+            wclrtoeol(fileWindow);
+        }
     }
+
+    wrefresh(fileWindow);
 }
 
-void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, AppState& appState) {
+void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState) {
     displayFiles(fileWindow, appState);
 
     createBorder(fileWindow);
     createBorder(audioInfoWindow);
+    createBorder(audioVisualWindow);
 
     refresh();
     wrefresh(fileWindow);
     wrefresh(audioInfoWindow);
+    wrefresh(audioVisualWindow);
 
     appState.shouldRedraw = false;
 }
@@ -112,7 +135,7 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
 
     // Helps maintain playing highlighter after refresh
     if (appState.isPlaying) {
-        for (int i{0}; i < appState.audioFiles.size(); i++) {
+        for (int i = 0; i < appState.audioFiles.size(); i++) {
             if (appState.audioName == appState.audioFiles[i].filename()) {
                 appState.playingIndex = i;
                 break;
@@ -128,71 +151,79 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
 
 //-----------------------------------------------------PRIVATE----------------------------------------------------------
 namespace {
-    void renderOscilloscope(WINDOW*& audioInfoWindow, double amplitude, double visTimer) {
+    void renderOscilloscope(WINDOW*& audioVisualInfo, AudioDisplayState& displayState) {
         int winHeight, winWidth;
-        getmaxyx(audioInfoWindow, winHeight, winWidth);
+        getmaxyx(audioVisualInfo, winHeight, winWidth);
 
         int centerY = winHeight / 2;
         double frequency = 0.1;
         int maxAmplitude = 4;
 
-        wattron(audioInfoWindow, COLOR_PAIR(4));
+        wattron(audioVisualInfo, COLOR_PAIR(4));
 
         for (int x = 0; x < winWidth; x++) {
-            double sineVal = std::sin((x * frequency) - visTimer);
-            double harmonic = std::sin((x * frequency * 2.5) + (visTimer * 0.5)) * 0.3;
-            int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * amplitude);
+            double sineVal = std::sin((x * frequency) - displayState.visTimer);
+            double harmonic = std::sin((x * frequency * 2.5) + (displayState.visTimer * 0.5)) * 0.3;
+            int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * displayState.amplitude);
             int finalY = centerY + yOffset;
 
-            if (finalY > 0 && finalY < winHeight - 1) mvwaddwstr(audioInfoWindow, finalY, x, L"━");
+            if (finalY > 0 && finalY < winHeight - 1) mvwaddwstr(audioVisualInfo, finalY, x, L"━");
         }
 
-        wattroff(audioInfoWindow, COLOR_PAIR(4));
+        wattroff(audioVisualInfo, COLOR_PAIR(4));
     }
 
-    std::string renderProgressBar(int windowWidth, int totalSeconds, double totalElapsedTime) {
-        int padding = 10;
-        int barWidth = windowWidth - padding;
-        double progress = totalSeconds > 0 ? totalElapsedTime / totalSeconds : 0;
+    void renderProgressBar(WINDOW*& audioInfoWindow, int windowWidth, AudioDisplayState& displayState) {
+        int rightSidePadding = 5;
+        int leftSidePadding = 2;
+        int yPos = 3;
+        int barWidth = windowWidth - rightSidePadding;
+        double progress = displayState.totalSeconds > 0 ? displayState.totalElapsedTime / displayState.totalSeconds : 0;
         double filled = progress * barWidth;
-
-        std::string bar = "[";
+        
         for (int i = 0; i < barWidth; i++) {
-            if (i < filled) bar += '#';
-            else bar += '-';
+            if (i < filled) mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"█");
+            else mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"▒");
         }
-        bar += ']';
 
-        return bar;
     }
 }
 //----------------------------------------------------------------------------------------------------------------------
 
 
-void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
+void displayAudioInfo(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState) {
     int xPadding = 2;
 
-    werase(audioInfoWindow);
+    werase(audioVisualWindow);
 
-    renderOscilloscope(audioInfoWindow, displayState.amplitude, displayState.visTimer);
+    renderOscilloscope(audioVisualWindow, displayState);
 
-    int winWidth = getmaxx(audioInfoWindow);
-    std::string progressBar = renderProgressBar(winWidth, displayState.totalSeconds, displayState.totalElapsedTime);
+    wattron(audioInfoWindow, COLOR_PAIR(4));
 
-    // Draw text info
     wmove(audioInfoWindow, 1, xPadding);
+    wclrtoeol(audioInfoWindow);
+
+    wattron(audioInfoWindow, WA_BOLD);
     wprintw(audioInfoWindow, "Now Playing: %s", displayState.audioName.c_str());
 
-    wmove(audioInfoWindow, 2, xPadding);
+    int winWidth = getmaxx(audioInfoWindow);
+    renderProgressBar(audioInfoWindow, winWidth, displayState);
+
+    wmove(audioInfoWindow, 4, xPadding);
+    wclrtoeol(audioInfoWindow);
     wprintw(audioInfoWindow, "Time: %d:%02d/%s",
             displayState.elapsedMinutes, displayState.elapsedSeconds, displayState.duration.c_str());
 
-    wmove(audioInfoWindow, 3, xPadding);
-    wprintw(audioInfoWindow, "%s", progressBar.c_str());
+    wattroff(audioInfoWindow, COLOR_PAIR(4));
+    wattroff(audioInfoWindow, WA_BOLD);
 
+    // Recreating the border since adding things to the window removes some parts :P
     createBorder(audioInfoWindow);
+    createBorder(audioVisualWindow);
 
+    refresh();
     wrefresh(audioInfoWindow);
+    wrefresh(audioVisualWindow);
 
     displayState.shouldRedraw = false;
 }

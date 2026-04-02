@@ -15,13 +15,13 @@ namespace fs = std::filesystem;
 void initializeTerminal();
 
 /** @brief Calculates layout and allocates ncurses WINDOW pointers. */
-void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow);
+void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow);
 
 /** @brief Draws double-line borders using wide-character support. */
 void createBorder(WINDOW*& window);
 
 /** @brief Process resizing with debouncing */
-void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow,
+void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
     std::atomic<AudioState>& audioState, AudioState& prevAudioState,
     AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime);
 
@@ -29,10 +29,10 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow,
 void displayFiles(WINDOW*& fileWindow, AppState& appState);
 
 /** @brief Used to update the UI */
-void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, AppState& appState);
+void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState);
 
 /** @brief Reconstructs the audioFiles container. */
 void refreshFiles(WINDOW*& fileWindow, AppState& appState);
 
 /** @brief Renders audio info from AudioDisplayState to the audio info window. */
-void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState);
+void displayAudioInfo(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);

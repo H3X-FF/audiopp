@@ -12,7 +12,7 @@
 
 
 int main() {
-    bool running{true};
+    bool running = true;
     AppState appState;
     AudioManager player;
 
@@ -25,16 +25,17 @@ int main() {
 
     WINDOW* fileWindow;
     WINDOW* audioInfoWindow;
+    WINDOW* audioVisualWindow;
 
     char command[80];
 
     initializeTerminal();
-    initializeWindows(fileWindow, audioInfoWindow);
+    initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
     initializeAppState(appState);
     initializeAudioDisplayState(appState.audioDisplay);
 
     while (running) {
-        int ch{getch()};
+        int ch = getch();
 
         if (ch != ERR) {
             switch (ch) {
@@ -66,6 +67,7 @@ int main() {
                     noecho();
 
                     appState.inCommandMode = false;
+                    appState.shouldRedraw = true;
 
                     break;
 
@@ -87,17 +89,39 @@ int main() {
                     appState.shouldResize = true;
                     break;
 
-                case KEY_UP:
-                    if (appState.currSelectionIndex > 0) appState.currSelectionIndex--;
-                    else appState.currSelectionIndex = appState.audioFiles.size() - 1;
-                    appState.shouldRedraw = true;
-                    break;
+                case KEY_UP: {
+                    appState.currSelectionIndex = (appState.currSelectionIndex - 1 + appState.numberOfFiles) % appState.numberOfFiles;
 
-                case KEY_DOWN:
-                    if (appState.currSelectionIndex < appState.audioFiles.size()-1) appState.currSelectionIndex++;
-                    else appState.currSelectionIndex = 0;
+                    int fileWindowHeight = getmaxy(fileWindow) - 2;
+
+                    if (appState.currSelectionIndex == appState.numberOfFiles - 1) {
+                        appState.topIndex = appState.numberOfFiles - fileWindowHeight;
+                    }
+                    else if (appState.currSelectionIndex < appState.topIndex) {
+                        appState.topIndex = appState.currSelectionIndex;
+                    }
+
+                    if (appState.topIndex < 0) appState.topIndex = 0;
+
                     appState.shouldRedraw = true;
                     break;
+                }
+
+                case KEY_DOWN: {
+                    appState.currSelectionIndex = (appState.currSelectionIndex + 1) % appState.numberOfFiles;
+
+                    int fileWindowHeight = getmaxy(fileWindow) - 2;
+
+                    if (appState.currSelectionIndex == 0) {
+                        appState.topIndex = 0;
+                    }
+                    else if (appState.currSelectionIndex >= appState.topIndex + fileWindowHeight) {
+                        appState.topIndex = appState.currSelectionIndex - fileWindowHeight + 1;
+                    }
+
+                    appState.shouldRedraw = true;
+                    break;
+                }
 
                 case 'r': // Manual refresh trigger
                     appState.shouldRefreshFiles = true;
@@ -127,7 +151,7 @@ int main() {
         }
 
 
-        if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioState, prevAudioState, appState, lastTime);
+        if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, audioState, prevAudioState, appState, lastTime);
 
         if (appState.shouldPlayNext) player.playNext(audioState, appState);
 
@@ -135,13 +159,14 @@ int main() {
 
         if (appState.shouldRefreshFiles) refreshFiles(fileWindow, appState);
 
-        if (appState.audioDisplay.shouldRedraw) displayAudioInfo(audioInfoWindow, appState.audioDisplay);
+        if (appState.audioDisplay.shouldRedraw) displayAudioInfo(audioInfoWindow, audioVisualWindow, appState.audioDisplay);
 
-        if (appState.shouldRedraw) redrawScreen(fileWindow, audioInfoWindow, appState);
+        if (appState.shouldRedraw) redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
     }
 
     delwin(fileWindow);
     delwin(audioInfoWindow);
+    delwin(audioVisualWindow);
     endwin();
 
     return 0;

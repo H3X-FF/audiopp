@@ -48,6 +48,7 @@ struct AppState {
     std::vector<fs::path> audioFiles;
 
     int playingIndex;
+    int topIndex;
     int currSelectionIndex;
     int numberOfFiles;
 
