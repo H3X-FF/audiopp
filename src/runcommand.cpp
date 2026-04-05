@@ -3,14 +3,14 @@
 #include <vector>
 #include <algorithm>
 #include <cctype>
-#include <exception>
+#include <functional>
 
 #include "commandpipeline.hpp"
 #include "runcommand.hpp"
 namespace fs = std::filesystem;
 
 namespace {
-    void addFilesToAppDir(const fs::directory_entry& entry, const fs::path& audioPath, std::string operation) {
+    void addFilesToAppDir(const fs::directory_entry& entry, const fs::path& audioPath, bool shouldMove) {
         std::string fileExtension{entry.path().extension()};
 
         // Case-insensitive extension check
@@ -19,10 +19,27 @@ namespace {
             return std::tolower(c);
         });
 
+        static int deniedFiles = 0;
 
         if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
             fs::copy(entry.path(), audioPath, fs::copy_options::skip_existing);
-            if (operation == "--move") fs::remove(entry.path());
+
+            // Removing the file from the original path for the --move option
+            if (shouldMove) {
+                std::error_code ec;
+
+                fs::remove(entry.path(), ec);
+
+                if (ec == std::errc::permission_denied) {
+                    deniedFiles++;
+
+                    CommandManager::validate::printError(
+                        "Permission denied for attempting to move " + std::to_string(deniedFiles) +
+                        " files. Copied instead"
+                        );
+
+                }
+            }
         }
     }
 
@@ -43,40 +60,33 @@ namespace {
         }
     }
 
-    void moveFile(int src, std::string& dest, AppState& appState) {
-        if (!fs::is_directory(dest)) {
-            CommandManager::validate::printError("\'" + dest + "\' doesn't exist");
-            return;
-        }
-
-        fs::copy(appState.audioFiles[src], dest);
-        fs::remove(appState.audioFiles[src]);
+//----------------------------------------------------------------------------------------------------------------------
+    void removeFile(std::string& src, AppState& appState) {
+        fs::remove(src);
     }
 
-    void removeFile(int src, AppState& appState) {
-        fs::remove(appState.audioFiles[src]);
-    }
+    void renameFile(std::string& src, std::string& dst, AppState& appState) {
+        fs::path filePath = src; // just to get the extension :P
+        std::string extension = filePath.extension();
 
-    void renameFile(int src, std::string& dest, AppState& appState) {
         fs::path audioppDir{AUDIOPP_PATH};
-        fs::rename(appState.audioFiles[src], audioppDir/dest);
+        fs::rename(src, audioppDir/(dst + extension));
     }
 
-    void resolveFile(std::string& src, std::string& dest, std::string operation, AppState& appState) {
-        int srcIdx;
-
+    void resolveFile(std::string& src, std::string& dst, AppState& appState, std::function<void()> action) {
         // If the user entered an index instead of a file name
         if (isNumber(src)) {
-            srcIdx = std::stoi(src)-1;
+            int srcIdx = std::stoi(src)-1;
 
             if (srcIdx > appState.numberOfFiles-1 || srcIdx < 0) {
                 CommandManager::validate::printError("Out of range index");
                 return;
             }
 
-            if (operation == "move") moveFile(srcIdx, dest, appState);
-            else if (operation == "remove") removeFile(srcIdx, appState);
-            else renameFile(srcIdx, dest, appState);
+            src = appState.audioFiles[srcIdx];
+
+            // Triggers the respective action if it's removing a file or renaming it
+            action();
 
             appState.shouldRefreshFiles = true;
 
@@ -85,36 +95,30 @@ namespace {
 
         // If user entered a file name, we search for it. Throw an error if file not found
         for (int i{0}; i < appState.numberOfFiles; i++) {
-            if (operation == "move") {
-                moveFile(i, dest, appState);
-                break;
-            }
 
-            if (operation == "remove") {
-                removeFile(i, appState);
-                break;
-            }
-
-            if (operation == "rename") { // rename
-                renameFile(i, dest, appState);
+            if (appState.audioFiles[i].filename() == src) {
+                // Triggers the respective action if it's removing a file or renaming it
+                action();
                 break;
             }
 
             if (i == appState.numberOfFiles - 1) {
-                CommandManager::validate::printError("Invalid source: " + src);
+                CommandManager::validate::printError("Invalid source file: " + src);
                 return;
             }
+
         }
 
         appState.shouldRefreshFiles = true;
     }
+
+//----------------------------------------------------------------------------------------------------------------------
 
 }
 
 void scan(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
     fs::path pathToAudioFiles{args[0]};
     bool isRecursive{false};
-    std::string operation{""};
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
@@ -122,10 +126,14 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
         return;
     }
 
+    bool shouldMove = false;
+
     // Parse command flags
     for (int i{0}; i < flags.size(); i++) {
-        if (flags[i] == "--move" || flags[i] =="--copy") operation = flags[i];
-        else isRecursive = true;
+        if (flags[i] == "--move") shouldMove = true;
+        else if (flags[i] == "--copy") shouldMove = false;
+
+        if (flags[i] == "--recurse") isRecursive = true;
     }
 
     fs::path audioPath{AUDIOPP_PATH};
@@ -133,36 +141,33 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
     // Non-recursive file scanning and importation
     if (!isRecursive) {
         for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
-            addFilesToAppDir(entry, audioPath, operation);
+            addFilesToAppDir(entry, audioPath, shouldMove);
         }
     }
     // Recursive file scanning and importation
     else {
         for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
-            addFilesToAppDir(entry, audioPath, operation);
+            addFilesToAppDir(entry, audioPath, shouldMove);
         }
     }
 
     appState.shouldRefreshFiles = true;
 }
 
-void mv(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState& appState) {
-    std::string src{args[0]};
-    std::string dst{args[1]};
-
-    resolveFile(src, dst, "move", appState);
-}
-
 void rm(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState &appState) {
     std::string src{args[0]};
     std::string dst{""};
 
-    resolveFile(src, dst, "remove", appState);
+    resolveFile(src, dst, appState, [&]() {
+        removeFile(src, appState);
+    });
 }
 
 void rname(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState &appState) {
     std::string src{args[0]};
     std::string dst{args[1]};
 
-    resolveFile(src, dst, "rename", appState);
+    resolveFile(src, dst, appState, [&]() {
+        renameFile(src, dst, appState);
+    });
 }

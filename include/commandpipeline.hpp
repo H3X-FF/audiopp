@@ -18,7 +18,7 @@ namespace CommandManager {
         struct CommandProperties {
             size_t minArgs;
             std::vector<std::string> allowedFlags;
-            std::function<void(const std::vector<std::string>&, const std::vector<std::string>&, AppState& appState)> action;
+            std::function<void(const std::vector<std::string>&, const std::vector<std::string>&, AppState&)> action;
         };
 
         extern std::thread errorThread;

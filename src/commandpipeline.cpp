@@ -19,7 +19,7 @@ void CommandManager::validate::printError(std::string msg) {
     printw("%s", msg.c_str());
     refresh();
 
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // Temporary (maybe)
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // Temporary
 
     move(LINES-1, 0);
     clrtoeol();
@@ -32,7 +32,6 @@ void CommandManager::validate::validateCommand(const std::vector<std::string>& t
     // Registry of available commands and their requirements
     static std::unordered_map<std::string, CommandProperties> commandRegistry{
         {"scan", {1, {"--move", "--copy", "--recurse"}, scan}},
-        {"mv", {2, {}, mv}},
         {"rm", {1, {}, rm}},
         {"rename", {2, {}, rname}}
     };
