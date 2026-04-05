@@ -48,7 +48,7 @@ std::vector<fs::path> getAudioFiles() {
             return std::tolower(c);
         });
 
-        if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".ogg" || fileExtension == ".mp3") {
+        if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
             files.push_back(entry.path());
         }
     }

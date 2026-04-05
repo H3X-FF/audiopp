@@ -3,6 +3,7 @@
 #include <atomic>
 #include <string>
 #include <thread>
+#include <chrono>
 
 #include <miniaudio/miniaudio.h>
 
@@ -30,8 +31,6 @@ class AudioManager {
     ma_result deviceInitRes;
     ma_result deviceStartRes;
 
-    ma_bool32 isSeekingFwd;
-
     ma_uint64 frameCursor;
     ma_uint64 totalFrames;
     ma_uint64 frameOffset;
@@ -39,6 +38,10 @@ class AudioManager {
     double totalSeconds;
     double remainingSeconds;
     double totalElapsedTime;
+
+    bool audioFinished;
+
+    std::chrono::time_point<std::chrono::steady_clock> lastBackSeekTime;
 
     /** @brief A function used by miniaudio's low-level API for delivering real-time PCM data. */
     static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);

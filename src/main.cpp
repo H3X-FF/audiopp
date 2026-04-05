@@ -18,7 +18,6 @@ int main() {
 
     // Threading and State Management
     std::atomic<AudioState> audioState{STOPPED};
-    AudioState prevAudioState;
 
     // Debounce timer for resize events to prevent flickering/crashes
     std::chrono::time_point<std::chrono::steady_clock> lastTime;
@@ -26,8 +25,6 @@ int main() {
     WINDOW* fileWindow;
     WINDOW* audioInfoWindow;
     WINDOW* audioVisualWindow;
-
-    char command[80];
 
     initializeTerminal();
     initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
@@ -44,16 +41,18 @@ int main() {
                     if (audioState.load() != STOPPED) player.terminateAudioThread();
                     break;
 
-                case ':': // Enter Command Mode
-                    nodelay(stdscr, FALSE); // Switch to blocking input
+                case ':': {
+                    char command[80];
+
+                    timeout(-1);
                     echo();
-                    move(LINES-1, 0);
                     bkgdset(A_REVERSE);
+                    move(LINES-1, 0);
                     clrtoeol();
                     printw(":");
 
                     /* Encountered an issue with the enter key leaking into the input,
-                     * so this flag is added to block from trying to play audio when in command mode */
+                     * so this flag was added to block from trying to play audio when in command mode */
                     appState.inCommandMode = true;
                     if (getnstr(command, sizeof(command)-1) == OK) {
                         bkgdset(A_NORMAL);
@@ -63,13 +62,14 @@ int main() {
                         command[0] = '\0';
                     }
 
-                    nodelay(stdscr, TRUE);
+                    timeout(60);
                     noecho();
 
                     appState.inCommandMode = false;
                     appState.shouldRedraw = true;
 
                     break;
+                }
 
                 case '.': // seek forward
                     if (audioState.load() == PAUSED) player.pausedWhileSeeking = true;
@@ -82,16 +82,14 @@ int main() {
                     break;
 
                 case KEY_RESIZE:
-                    // Temporarily pause UI updates in audio thread during resize
-                    if (audioState.load() != RESIZING) {
-                        prevAudioState = audioState.load();
-                        audioState.store(RESIZING);
-                    }
                     lastTime = std::chrono::steady_clock::now();
+                    // Not only does it trigger a recalculation, but also stops the audio thread from writing info to the screen
                     appState.shouldResize = true;
                     break;
 
                 case KEY_UP: {
+                    if (appState.numberOfFiles == 0) break;
+
                     appState.currSelectionIndex = (appState.currSelectionIndex - 1 + appState.numberOfFiles) % appState.numberOfFiles;
 
                     int fileWindowHeight = getmaxy(fileWindow) - 2;
@@ -110,6 +108,8 @@ int main() {
                 }
 
                 case KEY_DOWN: {
+                    if (appState.numberOfFiles == 0) break;
+
                     appState.currSelectionIndex = (appState.currSelectionIndex + 1) % appState.numberOfFiles;
 
                     int fileWindowHeight = getmaxy(fileWindow) - 2;
@@ -137,7 +137,7 @@ int main() {
 
 
                 case '\n':
-                    if (appState.inCommandMode || appState.currSelectionIndex == appState.playingIndex) break;
+                    if (appState.numberOfFiles == 0 ||appState.inCommandMode || appState.currSelectionIndex == appState.playingIndex) break;
 
                     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
 
@@ -152,7 +152,7 @@ int main() {
         }
 
 
-        if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, audioState, prevAudioState, appState, lastTime);
+        if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, appState, lastTime);
 
         if (appState.shouldPlayNext) player.playNext(audioState, appState);
 
@@ -163,6 +163,7 @@ int main() {
         if (appState.audioDisplay.shouldRedraw) displayAudioInfo(audioInfoWindow, audioVisualWindow, appState.audioDisplay);
 
         if (appState.shouldRedraw) redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
+
     }
 
     delwin(fileWindow);

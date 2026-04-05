@@ -8,7 +8,6 @@ namespace fs = std::filesystem;
 
 /** @brief Represents the synchronization state between the UI and Audio thread. */
 enum AudioState {
-    RESIZING,
     FAILED,
     SUCCESS,
     STOPPED,

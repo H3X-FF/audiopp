@@ -20,7 +20,7 @@ namespace {
         });
 
 
-        if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".ogg" || fileExtension == ".mp3") {
+        if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
             fs::copy(entry.path(), audioPath, fs::copy_options::skip_existing);
             if (operation == "--move") fs::remove(entry.path());
         }

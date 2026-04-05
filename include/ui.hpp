@@ -22,7 +22,6 @@ void createBorder(WINDOW*& window);
 
 /** @brief Process resizing with debouncing */
 void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
-    std::atomic<AudioState>& audioState, AudioState& prevAudioState,
     AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime);
 
 /** @brief Renders the list of files to the file window with highlighting and determines the top element for scrolling. */

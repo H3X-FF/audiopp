@@ -20,12 +20,14 @@ void initializeTerminal() {
     init_pair(2, COLOR_WHITE, COLOR_BLUE);
     init_pair(3, COLOR_WHITE, COLOR_RED);
     init_pair(4, COLOR_BLUE, 0);
+    init_pair(5, COLOR_MAGENTA, 0);
 
     curs_set(0);
     keypad(stdscr, TRUE);
     noecho();
     cbreak();
-    nodelay(stdscr, TRUE);
+    timeout(60);
+    // nodelay(stdscr, TRUE);
 }
 
 void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow) {
@@ -59,7 +61,6 @@ void createBorder(WINDOW*& window) {
 }
 
 void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
-    std::atomic<AudioState>& audioState, AudioState& prevAudioState,
     AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime) {
 
     auto now = std::chrono::steady_clock::now();
@@ -77,7 +78,6 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
 
         appState.shouldResize = false;
         appState.shouldRedraw = true;
-        audioState.store(prevAudioState);
     }
 
 }
@@ -149,7 +149,7 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
 }
 
 
-//-----------------------------------------------------PRIVATE----------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
 namespace {
     void renderOscilloscope(WINDOW*& audioVisualInfo, AudioDisplayState& displayState) {
         int winHeight, winWidth;
@@ -157,13 +157,13 @@ namespace {
 
         int centerY = winHeight / 2;
         double frequency = 0.1;
-        int maxAmplitude = 4;
+        int maxAmplitude = 3;
 
         wattron(audioVisualInfo, COLOR_PAIR(4));
 
         for (int x = 0; x < winWidth; x++) {
-            double sineVal = std::sin((x * frequency) - displayState.visTimer);
-            double harmonic = std::sin((x * frequency * 2.5) + (displayState.visTimer * 0.5)) * 0.3;
+            double sineVal = displayState.amplitude * std::sin((x * frequency) - displayState.visTimer);
+            double harmonic = displayState.amplitude * std::sin((x * frequency * 2.5) + (displayState.visTimer * 0.5)) * 0.3;
             int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * displayState.amplitude);
             int finalY = centerY + yOffset;
 
@@ -174,8 +174,8 @@ namespace {
     }
 
     void renderProgressBar(WINDOW*& audioInfoWindow, int windowWidth, AudioDisplayState& displayState) {
-        int rightSidePadding = 5;
-        int leftSidePadding = 2;
+        int rightSidePadding = 8;
+        int leftSidePadding = 3;
         int yPos = 3;
         int barWidth = windowWidth - rightSidePadding;
 
@@ -183,9 +183,19 @@ namespace {
         double filled = progress * barWidth;
 
         int fullBlocks = static_cast<int>(filled);
-        double remainder = filled = fullBlocks;
+        double remainder = filled - fullBlocks;
 
         const wchar_t* partials[] = {L"▏", L"▎", L"▍", L"▌", L"▋", L"▊", L"▉"};
+
+        wmove(audioInfoWindow, yPos, 0);
+        wclrtoeol(audioInfoWindow);
+
+        wattron(audioInfoWindow, COLOR_PAIR(5));
+        mvwaddwstr(audioInfoWindow, yPos, leftSidePadding-1, L"▉");
+        mvwaddwstr(audioInfoWindow, yPos, barWidth+leftSidePadding, L"▉");
+        wattroff(audioInfoWindow, COLOR_PAIR(5));
+
+        wattron(audioInfoWindow, COLOR_PAIR(4));
         
         for (int i = 0; i < barWidth; i++) {
             if (i < fullBlocks) {
@@ -196,10 +206,9 @@ namespace {
                 if (block > 6) block = 6;
                 mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, partials[block]);
             }
-            else {
-                mvwaddwstr(audioInfoWindow, yPos, i+leftSidePadding, L"▒");
-            }
         }
+
+        wattroff(audioInfoWindow, COLOR_PAIR(4));
 
     }
 }
@@ -214,18 +223,25 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, Audi
     renderOscilloscope(audioVisualWindow, displayState);
 
     wattron(audioInfoWindow, COLOR_PAIR(4));
+    wattron(audioInfoWindow, WA_BOLD);
 
     wmove(audioInfoWindow, 1, xPadding);
     wclrtoeol(audioInfoWindow);
 
-    wattron(audioInfoWindow, WA_BOLD);
     wprintw(audioInfoWindow, "Now Playing: %s", displayState.audioName.c_str());
+
+    wattroff(audioInfoWindow, COLOR_PAIR(4));
+    wattroff(audioInfoWindow, WA_BOLD);
 
     int winWidth = getmaxx(audioInfoWindow);
     renderProgressBar(audioInfoWindow, winWidth, displayState);
 
     wmove(audioInfoWindow, 4, xPadding);
     wclrtoeol(audioInfoWindow);
+
+    wattron(audioInfoWindow, COLOR_PAIR(4));
+    wattron(audioInfoWindow, WA_BOLD);
+
     wprintw(audioInfoWindow, "Time: %d:%02d/%s",
             displayState.elapsedMinutes, displayState.elapsedSeconds, displayState.duration.c_str());
 
