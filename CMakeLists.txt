@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
 
+# This was added so it doesn't have to reinstall ncurses every time I modify the damn file!
 if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR})
     execute_process(
             COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
@@ -27,8 +28,9 @@ set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
         src/states.cpp
         src/ui.cpp
-        src/commandpipeline.cpp
-        src/runcommand.cpp)
+        src/command_mode_and_pipe.cpp
+        src/file_commands.cpp
+        src/animations.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 

@@ -5,10 +5,10 @@
 #include <functional>
 #include <thread>
 
-#include "runcommand.hpp"
+#include "file_commands.hpp"
 #include "states.hpp"
 
-namespace CommandManager {
+namespace CommandPipe {
 
     namespace validate {
         /**
@@ -31,3 +31,5 @@ namespace CommandManager {
     /** @brief Entry point for processing user input from the TUI command line. */
     void setUpCommand(std::string prompt, AppState& appState);
 }
+
+void commandMode(AppState& appstate);

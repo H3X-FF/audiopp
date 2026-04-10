@@ -3,18 +3,19 @@
 
 void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
+    appState.shouldCheckForScroll = false;
     appState.shouldRefreshFiles = true;
     appState.shouldResize = false;
     appState.inCommandMode = false;
     appState.shouldPlayNext = false;
     appState.shouldPlayPrev = false;
 
+    appState.repeatMode = RepeatModes::REPEAT_ALL;
+
     appState.topIndex = 0;
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;
-
-    appState.audioName = "";
 }
 
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
@@ -28,8 +29,12 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
     audioDisplay.amplitude = 0.0;
     audioDisplay.visTimer = 0.0;
 
-    audioDisplay.shouldRedraw = false;
+    audioDisplay.shouldDrawAudioInfo = false;
+    audioDisplay.shouldRenderAnimation = false;
+    audioDisplay.changeDisplayedRepeatMode = false;
+    audioDisplay.shouldCleanup = false;
 
+    audioDisplay.repeatModeStr = "All";
 }
 
 std::vector<fs::path> getAudioFiles() {

@@ -7,14 +7,20 @@
 namespace fs = std::filesystem;
 
 /** @brief Represents the synchronization state between the UI and Audio thread. */
-enum AudioState {
+enum class AudioState {
     FAILED,
     SUCCESS,
     STOPPED,
     PLAYING,
     PAUSED,
     SEEKING_FWD,
-    SEEKING_BWD
+    SEEKING_BWD,
+};
+
+enum class RepeatModes {
+    REPEAT_ALL,
+    REPEAT_ONE,
+    REPEAT_OFF
 };
 
 /** @brief State for audio display info, written by AudioManager and read by TUI. */
@@ -31,28 +37,36 @@ struct AudioDisplayState {
     double totalElapsedTime;
     double amplitude;
     double visTimer;
-    bool shouldRedraw;
+
+    bool shouldDrawAudioInfo;
+    bool shouldRenderAnimation;
+    bool changeDisplayedRepeatMode;
+    bool shouldCleanup;
+
+    std::string repeatModeStr;
 };
 
 /** @brief Global application state including UI positions and track metadata. */
 struct AppState {
     bool shouldRedraw;
     bool shouldRefreshFiles;
+    bool shouldCheckForScroll;
     bool shouldResize;
     bool inCommandMode;
     bool shouldPlayNext;
     bool shouldPlayPrev;
+    bool shouldChangeRepeatMode;
 
     std::vector<fs::path> audioFiles;
+
+    RepeatModes repeatMode;
 
     int playingIndex;
     int topIndex;
     int currSelectionIndex;
     int numberOfFiles;
 
-    std::string audioName;
-
-    AudioDisplayState audioDisplay;
+    AudioDisplayState audioDisplayState;
 };
 
 /** @brief Sets default values for the AppState. */

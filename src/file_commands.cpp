@@ -5,8 +5,9 @@
 #include <cctype>
 #include <functional>
 
-#include "commandpipeline.hpp"
-#include "runcommand.hpp"
+#include "command_mode_and_pipe.hpp"
+#include "file_commands.hpp"
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -28,19 +29,23 @@ namespace {
             if (shouldMove) {
                 std::error_code ec;
 
+                // Reason for fs::remove instead of move: fs::rename is moody sometimes :P
                 fs::remove(entry.path(), ec);
 
                 if (ec == std::errc::permission_denied) {
                     deniedFiles++;
 
-                    CommandManager::validate::printError(
+                    CommandPipe::validate::printError(
                         "Permission denied for attempting to move " + std::to_string(deniedFiles) +
                         " files. Copied instead"
-                        );
+                    );
 
                 }
+
             }
         }
+
+        deniedFiles = 0;
     }
 
     bool isNumber(std::string& str) {
@@ -65,12 +70,25 @@ namespace {
         fs::remove(src);
     }
 
-    void renameFile(std::string& src, std::string& dst, AppState& appState) {
-        fs::path filePath = src; // just to get the extension :P
-        std::string extension = filePath.extension();
 
-        fs::path audioppDir{AUDIOPP_PATH};
-        fs::rename(src, audioppDir/(dst + extension));
+
+    void renameFile(std::string& src, std::string& dst, AppState& appState) {
+        fs::path audioppDir = AUDIOPP_PATH;
+        fs::path oldName = audioppDir / src;
+
+        fs::path newName = audioppDir/dst;
+
+        if (oldName.extension() != newName.extension()) {
+            newName = newName.string() + oldName.extension().string();
+        }
+
+        std::error_code ec; // This is just to handle the illegal file ntrash:/3609691475_VSTHEMES-ORG.zipame '/'
+
+        fs::rename(oldName, newName, ec);
+
+        if (ec) {
+            CommandPipe::validate::printError("Can't name file as: " + src);
+        }
     }
 
     void resolveFile(std::string& src, std::string& dst, AppState& appState, std::function<void()> action) {
@@ -79,7 +97,12 @@ namespace {
             int srcIdx = std::stoi(src)-1;
 
             if (srcIdx > appState.numberOfFiles-1 || srcIdx < 0) {
-                CommandManager::validate::printError("Out of range index");
+                CommandPipe::validate::printError("Out of range index");
+                return;
+            }
+
+            if (srcIdx == appState.playingIndex) {
+                CommandPipe::validate::printError("Can't modify an active track");
                 return;
             }
 
@@ -97,13 +120,20 @@ namespace {
         for (int i{0}; i < appState.numberOfFiles; i++) {
 
             if (appState.audioFiles[i].filename() == src) {
+
+                if (i == appState.playingIndex) {
+                    CommandPipe::validate::printError("Can't modify an active track");
+                    return;
+                }
+
                 // Triggers the respective action if it's removing a file or renaming it
+                src = appState.audioFiles[i];
                 action();
                 break;
             }
 
             if (i == appState.numberOfFiles - 1) {
-                CommandManager::validate::printError("Invalid source file: " + src);
+                CommandPipe::validate::printError("Invalid source file: " + src);
                 return;
             }
 
@@ -122,7 +152,7 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
-        CommandManager::validate::printError("Not a directory: " + pathToAudioFiles.string());
+        CommandPipe::validate::printError("Not a directory: " + pathToAudioFiles.string());
         return;
     }
 
