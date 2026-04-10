@@ -281,18 +281,17 @@ void AudioManager::playAndManageAudio() {
         std::this_thread::sleep_for(std::chrono::milliseconds(60));
     }
 
-    // Clean up or trigger autoplay next track
 
-    if (appState->repeatMode != RepeatModes::REPEAT_OFF) {
+    if (appState->repeatMode == RepeatModes::REPEAT_OFF &&
+        appState->playingIndex == appState->numberOfFiles-1) {
 
-        if (audioFinished && !appState->shouldPlayPrev) appState->shouldPlayNext = true;
-
-    }
-    else if (appState->playingIndex == appState->numberOfFiles-1) {
-        displayState->shouldCleanup = true;
         uninitializeAppState(appState, displayState);
-
+        displayState->shouldCleanup = true;
+        appState->shouldRedraw = true;
     }
+    else if (audioFinished) appState->shouldPlayNext = true;
+
+
 
     uninitializeMA();
 }

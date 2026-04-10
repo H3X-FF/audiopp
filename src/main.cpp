@@ -162,7 +162,8 @@ int main() {
 
 
                 case ENTER_KEY:
-                    if (appState.numberOfFiles == 0 ||appState.inCommandMode || appState.currSelectionIndex == appState.playingIndex) break;
+                    if (appState.numberOfFiles == 0 ||appState.inCommandMode ||
+                        appState.currSelectionIndex == appState.playingIndex) break;
 
                     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
 
@@ -200,9 +201,6 @@ int main() {
 
         if (appState.audioDisplayState.shouldCleanup) cleanupAudioWindows(
             audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
-
-
-
     }
 
     delwin(fileWindow);
