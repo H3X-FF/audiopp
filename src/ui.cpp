@@ -7,7 +7,7 @@
 
 #include "states.hpp"
 #include "ui.hpp"
-#include "animations.h"
+#include "animations.hpp"
 
 void initializeTerminal() {
     setlocale(LC_ALL, "");
@@ -92,6 +92,9 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
 
     auto now = std::chrono::steady_clock::now();
     if (now - lastTime >= std::chrono::milliseconds(150)) {
+
+        werase(audioInfoWindow); // This for clearing the static text to avoid an ugly glitchy look during resize
+
         if (fileWindow) delwin(fileWindow);
         if (audioInfoWindow) delwin(audioInfoWindow);
         if (audioVisualWindow) delwin(audioVisualWindow);
@@ -108,7 +111,10 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
         appState.shouldRedraw = true;
 
         // Prevents drawing "info" after resizing but nothing is playing
-        appState.audioDisplayState.shouldDrawAudioInfo = appState.playingIndex != -1;
+        if (appState.playingIndex != -1) {
+            appState.audioDisplayState.shouldDrawAudioInfo = appState.playingIndex != -1;
+            appState.audioDisplayState.displayCurrRepeatMode = true;
+        }
     }
 
 }
@@ -161,7 +167,8 @@ void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioV
 }
 
 void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
-    appState.audioFiles = getAudioFiles();
+    appState.audioFiles.clear();
+    getAudioFiles(appState);
     appState.numberOfFiles = appState.audioFiles.size();
 
     // Helps maintain playing highlighter after refresh
@@ -245,7 +252,7 @@ void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState
     refresh();
     wrefresh(audioInfoWindow);
 
-    displayState.changeDisplayedRepeatMode = false;
+    displayState.displayCurrRepeatMode = false;
 }
 
 void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState) {

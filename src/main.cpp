@@ -97,8 +97,6 @@ int main() {
 
                 case KEY_RESIZE:
                     lastTime = std::chrono::steady_clock::now();
-                    werase(audioInfoWindow); // This for clearing the static text to avoid an ugly glitchy look during resize
-
                     // calls resizeWin() to recalculate the new size, and prevents audio windows from displaying anything
                     appState.shouldResize = true;
 
@@ -136,7 +134,7 @@ int main() {
                     break;
 
                 case ':': {
-                    // it's lazy but at least it works :P
+                    // Can't risk corruption in the buffer and cursor during command mode!
                     sigset_t set;
                     sigemptyset(&set);
                     sigaddset(&set, SIGWINCH);
@@ -196,7 +194,7 @@ int main() {
         if (appState.audioDisplayState.shouldRenderAnimation) renderAnimations(
             audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
 
-        if (appState.audioDisplayState.changeDisplayedRepeatMode) displayRepeatMode(
+        if (appState.audioDisplayState.displayCurrRepeatMode) displayRepeatMode(
             audioInfoWindow, appState.audioDisplayState);
 
         if (appState.audioDisplayState.shouldCleanup) cleanupAudioWindows(

@@ -8,6 +8,8 @@
 #include "command_mode_and_pipe.hpp"
 #include "file_commands.hpp"
 
+#include "sort_types.hpp"
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -184,7 +186,7 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
     appState.shouldRefreshFiles = true;
 }
 
-void rm(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState &appState) {
+void rm(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
     std::string src{args[0]};
     std::string dst{""};
 
@@ -193,11 +195,29 @@ void rm(const std::vector<std::string> &args, const std::vector<std::string> &fl
     });
 }
 
-void rname(const std::vector<std::string> &args, const std::vector<std::string> &flags, AppState &appState) {
+void rname(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
     std::string src{args[0]};
     std::string dst{args[1]};
 
     resolveFile(src, dst, appState, [&]() {
         renameFile(src, dst, appState);
     });
+}
+
+void sortList(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
+
+    if (args[0] != "name" && args[0] != "lwt" && args[0] != "size" &&  args[0] != "ext") {
+        CommandPipe::validate::printError("Invalid argument for sort");
+        return;
+    }
+
+    if (flags.size() > 1) {
+        CommandPipe::validate::printError("Too many flags!");
+        return;
+    }
+
+    appState.sortActions.sortType = args[0];
+    appState.sortActions.reversed = (!flags.empty() && flags[0] == "--reverse");
+
+    appState.shouldRefreshFiles = true;
 }

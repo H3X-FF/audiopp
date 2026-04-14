@@ -12,7 +12,7 @@
 #include "states.hpp"
 
 void AudioManager::terminateAudioThread() {
-    audioState->store(AudioState::STOPPED);
+    audioState->store(AudioState::STOPPED); 
     if (audioThread.joinable()) audioThread.join();
 }
 // Resets UI-related playback state when audio stops.
@@ -198,6 +198,8 @@ AudioState AudioManager::initializeMA() {
 
     // Retrieve file length in frames and calculate total duration in seconds
     ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
+
+    // --- Other ---
     totalSeconds = static_cast<double>(totalFrames) / deviceConfig.sampleRate;
 
     totalElapsedTime = 0;
@@ -214,7 +216,7 @@ AudioState AudioManager::initializeMA() {
     displayState->audioName = appState->audioDisplayState.audioName;
     displayState->duration = getFullAudioDuration();
     displayState->shouldDrawAudioInfo = true;
-    displayState->changeDisplayedRepeatMode = true;
+    displayState->displayCurrRepeatMode = true;
 
     return AudioState::SUCCESS;
 }
@@ -267,7 +269,7 @@ void AudioManager::playAndManageAudio() {
             }
 
             appState->shouldChangeRepeatMode = false;
-            displayState->changeDisplayedRepeatMode = true;
+            displayState->displayCurrRepeatMode = true;
         }
 
         // Update display state (but skip during resize to avoid flickering)

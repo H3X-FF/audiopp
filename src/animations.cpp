@@ -1,7 +1,7 @@
 #include <cmath>
 #include <ncursesw/ncurses.h>
 
-#include "animations.h"
+#include "animations.hpp"
 #include "states.hpp"
 
 

@@ -40,10 +40,15 @@ struct AudioDisplayState {
 
     bool shouldDrawAudioInfo;
     bool shouldRenderAnimation;
-    bool changeDisplayedRepeatMode;
+    bool displayCurrRepeatMode;
     bool shouldCleanup;
 
     std::string repeatModeStr;
+};
+
+struct SortCommandActions {
+    std::string sortType;
+    bool reversed;
 };
 
 /** @brief Global application state including UI positions and track metadata. */
@@ -67,6 +72,7 @@ struct AppState {
     int numberOfFiles;
 
     AudioDisplayState audioDisplayState;
+    SortCommandActions sortActions;
 };
 
 /** @brief Sets default values for the AppState. */
@@ -76,4 +82,4 @@ void initializeAppState(AppState& appState);
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay);
 
 /** @brief Scans the designated audio directory for audio files. */
-std::vector<fs::path> getAudioFiles();
+void getAudioFiles(AppState& appState);

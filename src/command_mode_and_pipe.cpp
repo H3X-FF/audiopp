@@ -37,9 +37,12 @@ void CommandPipe::validate::printError(std::string msg) {
 void CommandPipe::validate::validateCommand(const std::vector<std::string>& tokens, AppState& appState) {
     // Registry of available commands and their requirements
     static std::unordered_map<std::string, CommandProperties> commandRegistry{
+
         {"scan", {1, {"--move", "--copy", "--recurse"}, scan}},
         {"rm", {1, {}, rm}},
-        {"rename", {2, {}, rname}}
+        {"rename", {2, {}, rname}},
+        {"sort", {1, {"--normal", "--reverse"}, sortList}}
+
     };
 
     std::string command{tokens[0]};
@@ -63,7 +66,7 @@ void CommandPipe::validate::validateCommand(const std::vector<std::string>& toke
             flags.push_back(tokens[i]);
         }
         else {
-            printError("Invalid arguments: " + tokens[i]);
+            printError("Invalid arguments/flags: " + tokens[i]);
             return;
         }
     }

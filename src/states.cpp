@@ -1,6 +1,8 @@
 #include "states.hpp"
 #include <algorithm>
 
+#include "sort_types.hpp"
+
 void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
     appState.shouldCheckForScroll = false;
@@ -16,6 +18,8 @@ void initializeAppState(AppState& appState) {
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;
+
+    appState.sortActions.sortType = "name";
 }
 
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
@@ -31,18 +35,16 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
 
     audioDisplay.shouldDrawAudioInfo = false;
     audioDisplay.shouldRenderAnimation = false;
-    audioDisplay.changeDisplayedRepeatMode = false;
+    audioDisplay.displayCurrRepeatMode = false;
     audioDisplay.shouldCleanup = false;
 
     audioDisplay.repeatModeStr = "All";
 }
 
-std::vector<fs::path> getAudioFiles() {
+void getAudioFiles(AppState& appState) {
     fs::path audioPath{AUDIOPP_PATH};
 
-    std::vector<fs::path> files;
-
-    if (!fs::exists(audioPath)) fs::create_directory(audioPath);
+    if (!fs::exists(audioPath)) fs::create_directories(audioPath);
 
     for (const auto entry : fs::directory_iterator(audioPath)) {
         std::string fileExtension{entry.path().extension()};
@@ -54,9 +56,20 @@ std::vector<fs::path> getAudioFiles() {
         });
 
         if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
-            files.push_back(entry.path());
+            appState.audioFiles.push_back(entry.path());
         }
     }
 
-    return files;
+    if (appState.sortActions.sortType == "name") {
+        sortByName(appState);
+    }
+    else if (appState.sortActions.sortType == "lwt") {
+        sortByLastWrite(appState);
+    }
+    else if (appState.sortActions.sortType == "size") {
+        sortBySize(appState);
+    }
+    else if (appState.sortActions.sortType == "ext") {
+        sortByExtension(appState);
+    }
 }
