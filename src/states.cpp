@@ -38,7 +38,7 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
     audioDisplay.displayCurrRepeatMode = false;
     audioDisplay.shouldCleanup = false;
 
-    audioDisplay.repeatModeStr = "All";
+    audioDisplay.repeatModeInfo = "All";
 }
 
 void getAudioFiles(AppState& appState) {

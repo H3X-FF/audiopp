@@ -1,0 +1,18 @@
+[KEYBINDINGS]
+Up Arrow           | Go up in the list
+Down Arrow         | Go down in the list
+ENTER              | Start track
+SPACE              | Play/Pause active track
+r                  | Manually refresh file list
+,                  | Seek backward
+.                  | Seek forward
+f                  | Go to active track in the list
+l                  | Change repeat mode
+:                  | Enter command mode
+ESC                | Exit command mode/program
+
+[COMMANDS]
+scan [DIR]         | Scans directory and adds to list. Flags: --copy, --move, --recurse
+rm [ID]            | Removes track by filename or index.
+rename [ID] [NAME] | Changes file name by filename or index.
+sort [TYPE]        | Sort by: name, lwt (time), size, ext. Flags: --normal, --reverse

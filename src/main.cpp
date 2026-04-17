@@ -11,6 +11,7 @@
 #include "audiomanager.hpp"
 #include "ui.hpp"
 #include "command_mode_and_pipe.hpp"
+#include "help.hpp"
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
@@ -23,9 +24,8 @@ int main() {
     // Threading and State Management
     std::atomic<AudioState> audioState{AudioState::STOPPED};
 
-
     // Debounce timer for resize events to prevent flickering/crashes
-    std::chrono::time_point<std::chrono::steady_clock> lastTime;
+    std::chrono::time_point<std::chrono::steady_clock> lastResizeTime;
 
     WINDOW* fileWindow;
     WINDOW* audioInfoWindow;
@@ -37,7 +37,6 @@ int main() {
     initializeAudioDisplayState(appState.audioDisplayState);
 
     while (running) {
-
         int ch = getch();
 
         if (ch != ERR) {
@@ -96,9 +95,23 @@ int main() {
                 }
 
                 case KEY_RESIZE:
-                    lastTime = std::chrono::steady_clock::now();
+                    lastResizeTime = std::chrono::steady_clock::now();
+
                     // calls resizeWin() to recalculate the new size, and prevents audio windows from displaying anything
                     appState.shouldResize = true;
+
+                    break;
+
+                case 'h':
+                    werase(fileWindow);
+                    werase(audioInfoWindow);
+                    werase(audioVisualWindow);
+
+                    refresh();
+                    wrefresh(fileWindow);
+                    wrefresh(audioInfoWindow);
+                    wrefresh(audioVisualWindow);
+                    displayHelp(appState);
 
                     break;
 
@@ -114,7 +127,7 @@ int main() {
 
                     break;
 
-                case 'f': {
+                case 'f':
                     if (appState.playingIndex == -1)  break;
 
                     appState.currSelectionIndex = appState.playingIndex;
@@ -124,7 +137,7 @@ int main() {
                     appState.shouldRedraw = true;
 
                     break;
-                }
+
 
                 case 'l':
                     appState.repeatMode = static_cast<RepeatModes>((static_cast<int>(appState.repeatMode) + 1) % 3);
@@ -176,29 +189,48 @@ int main() {
         }
 
 
-        if (appState.shouldResize) resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, appState, lastTime);
+        // Just a bunch of state checks
+        if (appState.shouldRedraw) {
+            redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
+        }
 
-        if (appState.shouldRedraw) redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
+        if (appState.shouldRefreshFiles) {
+            refreshFiles(fileWindow, appState);
+        }
 
-        if (appState.shouldCheckForScroll) scrollList(fileWindow, appState);
+        if (appState.shouldResize) {
+            resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, appState, lastResizeTime);
+        }
 
-        if (appState.shouldPlayNext) player.playNext(audioState, appState);
+        if (appState.shouldCheckForScroll) {
+            scrollList(fileWindow, appState);
+        }
 
-        if (appState.shouldPlayPrev) player.playPrevious(audioState, appState);
+        if (appState.audioDisplayState.shouldRenderAnimation) {
+            renderAnimations(audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        }
 
-        if (appState.shouldRefreshFiles) refreshFiles(fileWindow, appState);
+        if (appState.audioDisplayState.shouldDrawAudioInfo) {
+            displayAudioInfo(audioInfoWindow, appState.audioDisplayState);
+        }
 
-        if (appState.audioDisplayState.shouldDrawAudioInfo) displayAudioInfo(
-            audioInfoWindow, appState.audioDisplayState);
+        if (appState.audioDisplayState.displayCurrRepeatMode) {
+            displayRepeatMode(audioInfoWindow, appState.audioDisplayState);
+        }
 
-        if (appState.audioDisplayState.shouldRenderAnimation) renderAnimations(
-            audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        if (appState.audioDisplayState.shouldCleanup) {
+            cleanupAudioWindows(audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        }
 
-        if (appState.audioDisplayState.displayCurrRepeatMode) displayRepeatMode(
-            audioInfoWindow, appState.audioDisplayState);
+        if (appState.shouldPlayNext) {
+            player.playNext(audioState, appState);
+        }
 
-        if (appState.audioDisplayState.shouldCleanup) cleanupAudioWindows(
-            audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        if (appState.shouldPlayPrev) {
+            player.playPrevious(audioState, appState);
+        }
+
+
     }
 
     delwin(fileWindow);

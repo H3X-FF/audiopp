@@ -26,7 +26,7 @@ void scrollList(WINDOW*& fileWindow, AppState& appState);
 
 /** @brief Process resizing with debouncing */
 void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
-    AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime);
+    AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastResizeTime);
 
 /** @brief Renders the list of files to the file window with highlighting and determines the top element for scrolling. */
 void displayFiles(WINDOW*& fileWindow, AppState& appState);

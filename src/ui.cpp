@@ -7,6 +7,9 @@
 
 #include "states.hpp"
 #include "ui.hpp"
+
+#include <bits/this_thread_sleep.h>
+
 #include "animations.hpp"
 
 void initializeTerminal() {
@@ -87,13 +90,17 @@ void scrollList(WINDOW*& fileWindow, AppState &appState) {
     }
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+
 void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
-               AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastTime) {
+               AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastResizeTime) {
 
     auto now = std::chrono::steady_clock::now();
-    if (now - lastTime >= std::chrono::milliseconds(150)) {
+    if (now - lastResizeTime >= std::chrono::milliseconds(150)) {
 
-        werase(audioInfoWindow); // This for clearing the static text to avoid an ugly glitchy look during resize
+        // werase(audioInfoWindow); // This for clearing the static text to avoid an ugly glitchy look during resize
 
         if (fileWindow) delwin(fileWindow);
         if (audioInfoWindow) delwin(audioInfoWindow);
@@ -116,7 +123,6 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
             appState.audioDisplayState.displayCurrRepeatMode = true;
         }
     }
-
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -125,7 +131,12 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
 
 void displayFiles(WINDOW*& fileWindow, AppState& appState) {
     int pair;
+    int fileWindowWidth = getmaxx(fileWindow) - 2;
     int fileWindowHeight = getmaxy(fileWindow) - 2;
+
+    std::string filename;
+    // This is used for if the filename is longer than the fileWindow's width
+    int limit =fileWindowWidth - 7;
 
     for (int i{0}; i < fileWindowHeight; i++) {
         int currentItem = appState.topIndex + i;
@@ -137,9 +148,18 @@ void displayFiles(WINDOW*& fileWindow, AppState& appState) {
             if (currentItem == appState.currSelectionIndex) pair = 1;
             else if (currentItem == appState.playingIndex) pair = 2;
 
+            filename = appState.audioFiles[currentItem].filename();
+
             wbkgdset(fileWindow, COLOR_PAIR(pair));
             wclrtoeol(fileWindow);
-            mvwprintw(fileWindow, i+1, 2, "%d. %s", currentItem+1, appState.audioFiles[currentItem].filename().c_str());
+
+            if (filename.length() >= limit) {
+                mvwprintw(fileWindow, i+1, 2, "%d %.*s...", currentItem+1, limit, filename.c_str());
+            }
+            else {
+                mvwprintw(fileWindow, i+1, 2, "%d. %s", currentItem+1, filename.c_str());
+            }
+
             wbkgdset(fileWindow, A_NORMAL);
         }
         else {
@@ -210,6 +230,9 @@ const int X_POS = 2;
 void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
 
     int yPos = 1;
+    int winWidth = getmaxx(audioInfoWindow) - 2;
+    int limit = winWidth - 17;
+    std::string audioName = displayState.audioName;
 
     wattron(audioInfoWindow, COLOR_PAIR(4));
     wattron(audioInfoWindow, WA_BOLD);
@@ -217,7 +240,12 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
     wmove(audioInfoWindow, yPos, X_POS);
     wclrtoeol(audioInfoWindow);
 
-    wprintw(audioInfoWindow, "Now Playing: %s", displayState.audioName.c_str());
+    if (audioName.length() >= limit) {
+        wprintw(audioInfoWindow, "Now Playing: %.*s...", limit, audioName.c_str());
+    }
+    else {
+        wprintw(audioInfoWindow, "Now Playing: %s", audioName.c_str());
+    }
 
     wattroff(audioInfoWindow, COLOR_PAIR(4));
     wattroff(audioInfoWindow, WA_BOLD);
@@ -242,7 +270,7 @@ void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState
     wattron(audioInfoWindow, COLOR_PAIR(4));
     wattron(audioInfoWindow, WA_BOLD);
 
-    wprintw(audioInfoWindow, "Repeat Mode: %s", displayState.repeatModeStr.c_str());
+    wprintw(audioInfoWindow, "Repeat Mode: %s", displayState.repeatModeInfo.c_str());
 
     wattroff(audioInfoWindow, COLOR_PAIR(4));
     wattroff(audioInfoWindow, WA_BOLD);

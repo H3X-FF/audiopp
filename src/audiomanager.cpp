@@ -256,15 +256,15 @@ void AudioManager::playAndManageAudio() {
         if (appState->shouldChangeRepeatMode) {
             switch (appState->repeatMode) {
                 case RepeatModes::REPEAT_ALL:
-                    displayState->repeatModeStr = "All";
+                    displayState->repeatModeInfo = "All";
                     break;
 
                 case RepeatModes::REPEAT_ONE:
-                    displayState->repeatModeStr = "One";
+                    displayState->repeatModeInfo = "One";
                     break;
 
                 case RepeatModes::REPEAT_OFF:
-                    displayState->repeatModeStr = "Off";
+                    displayState->repeatModeInfo = "Off";
                     break;
             }
 

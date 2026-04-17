@@ -26,8 +26,8 @@ enum class RepeatModes {
 /** @brief State for audio display info, written by AudioManager and read by TUI. */
 struct AudioDisplayState {
     std::string audioName;
-    std::string progressBar;
     std::string duration;
+    std::string repeatModeInfo;
 
 
     int elapsedMinutes;
@@ -42,8 +42,6 @@ struct AudioDisplayState {
     bool shouldRenderAnimation;
     bool displayCurrRepeatMode;
     bool shouldCleanup;
-
-    std::string repeatModeStr;
 };
 
 struct SortCommandActions {
