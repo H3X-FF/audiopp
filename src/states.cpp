@@ -1,7 +1,10 @@
 #include "states.hpp"
 #include <algorithm>
+#include <ncursesw/ncurses.h>
+#include <thread>
+#include <chrono>
 
-#include "sort_types.hpp"
+#include"sort_commands.hpp"
 
 void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
@@ -72,4 +75,20 @@ void getAudioFiles(AppState& appState) {
     else if (appState.sortActions.sortType == "ext") {
         sortByExtension(appState);
     }
+}
+
+void printError(std::string msg) {
+    move(LINES-1, 0);
+    clrtoeol();
+    wbkgdset(stdscr, COLOR_PAIR(3));
+    printw("%s", msg.c_str());
+    refresh();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+    move(LINES-1, 0);
+    wbkgdset(stdscr, A_NORMAL);
+    clrtoeol();
+
+    refresh();
 }

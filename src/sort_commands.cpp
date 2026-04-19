@@ -5,7 +5,7 @@
 #include <cctype>
 
 #include "states.hpp"
-#include "sort_types.hpp"
+#include "sort_commands.hpp"
 
 namespace fs = std::filesystem;
 
@@ -105,4 +105,22 @@ void sortByExtension(AppState& appState) {
         return sortByExtensionComparator(a, b, appState);
         });
     }
+}
+
+void sortList(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
+
+    if (args[0] != "name" && args[0] != "lwt" && args[0] != "size" &&  args[0] != "ext") {
+        printError("Invalid argument for sort");
+        return;
+    }
+
+    if (flags.size() > 1) {
+        printError("Too many flags!");
+        return;
+    }
+
+    appState.sortActions.sortType = args[0];
+    appState.sortActions.reversed = (!flags.empty() && flags[0] == "--reverse");
+
+    appState.shouldRefreshFiles = true;
 }

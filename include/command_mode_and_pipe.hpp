@@ -1,11 +1,11 @@
 #pragma once
+#ifndef AUDIOPP_COMMAND_MODE_AND_PIPE_HPP
+#define AUDIOPP_COMMAND_MODE_AND_PIPE_HPP
 
 #include <string>
 #include <vector>
 #include <functional>
-#include <thread>
 
-#include "file_commands.hpp"
 #include "states.hpp"
 
 namespace CommandPipe {
@@ -21,9 +21,6 @@ namespace CommandPipe {
             std::function<void(const std::vector<std::string>&, const std::vector<std::string>&, AppState&)> action;
         };
 
-        extern std::thread errorThread;
-
-        void printError(std::string msg);
         /** @brief Validates and executes a command based on parsed tokens. */
         void validateCommand(const std::vector<std::string>& tokens, AppState& appState);
     }
@@ -33,3 +30,5 @@ namespace CommandPipe {
 }
 
 void commandMode(AppState& appstate);
+
+#endif

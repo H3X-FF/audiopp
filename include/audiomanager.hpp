@@ -1,4 +1,6 @@
 #pragma once
+#ifndef AUDIOPP_AUDIOMANAGER_HPP
+#define AUDIOPP_AUDIOMANAGER_HPP
 
 #include <atomic>
 #include <string>
@@ -78,3 +80,5 @@ public:
     void playNext(std::atomic<AudioState>& audioState, AppState& appState);
     void playPrevious(std::atomic<AudioState> &audioState, AppState &appState);
 };
+
+#endif

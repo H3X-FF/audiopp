@@ -222,7 +222,11 @@ AudioState AudioManager::initializeMA() {
 }
 
 void AudioManager::playAndManageAudio() {
-    if (initializeMA() == AudioState::FAILED) return;
+    if (initializeMA() == AudioState::FAILED) {
+        printError("Failed to initialize device");
+        audioState->store(AudioState::STOPPED);
+        return;
+    }
 
     displayState->amplitude = 0.0;
     displayState->visTimer = 0.0;

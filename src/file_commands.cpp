@@ -5,10 +5,8 @@
 #include <cctype>
 #include <functional>
 
-#include "command_mode_and_pipe.hpp"
+#include "states.hpp"
 #include "file_commands.hpp"
-
-#include "sort_types.hpp"
 
 namespace fs = std::filesystem;
 
@@ -37,7 +35,7 @@ namespace {
                 if (ec == std::errc::permission_denied) {
                     deniedFiles++;
 
-                    CommandPipe::validate::printError(
+                    printError(
                         "Permission denied for attempting to move " + std::to_string(deniedFiles) +
                         " files. Copied instead"
                     );
@@ -89,7 +87,7 @@ namespace {
         fs::rename(oldName, newName, ec);
 
         if (ec) {
-            CommandPipe::validate::printError("Can't name file as: " + src);
+            printError("Can't name file as: " + src);
         }
     }
 
@@ -99,12 +97,12 @@ namespace {
             int srcIdx = std::stoi(src)-1;
 
             if (srcIdx > appState.numberOfFiles-1 || srcIdx < 0) {
-                CommandPipe::validate::printError("Out of range index");
+                printError("Out of range index");
                 return;
             }
 
             if (srcIdx == appState.playingIndex) {
-                CommandPipe::validate::printError("Can't modify an active track");
+                printError("Can't modify an active track");
                 return;
             }
 
@@ -124,7 +122,7 @@ namespace {
             if (appState.audioFiles[i].filename() == src) {
 
                 if (i == appState.playingIndex) {
-                    CommandPipe::validate::printError("Can't modify an active track");
+                    printError("Can't modify an active track");
                     return;
                 }
 
@@ -135,7 +133,7 @@ namespace {
             }
 
             if (i == appState.numberOfFiles - 1) {
-                CommandPipe::validate::printError("Invalid source file: " + src);
+                printError("Invalid source file: " + src);
                 return;
             }
 
@@ -154,7 +152,7 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
-        CommandPipe::validate::printError("Not a directory: " + pathToAudioFiles.string());
+        printError("Not a directory: " + pathToAudioFiles.string());
         return;
     }
 
@@ -202,22 +200,4 @@ void rname(const std::vector<std::string>& args, const std::vector<std::string>&
     resolveFile(src, dst, appState, [&]() {
         renameFile(src, dst, appState);
     });
-}
-
-void sortList(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
-
-    if (args[0] != "name" && args[0] != "lwt" && args[0] != "size" &&  args[0] != "ext") {
-        CommandPipe::validate::printError("Invalid argument for sort");
-        return;
-    }
-
-    if (flags.size() > 1) {
-        CommandPipe::validate::printError("Too many flags!");
-        return;
-    }
-
-    appState.sortActions.sortType = args[0];
-    appState.sortActions.reversed = (!flags.empty() && flags[0] == "--reverse");
-
-    appState.shouldRefreshFiles = true;
 }

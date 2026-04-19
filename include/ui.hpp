@@ -1,4 +1,6 @@
 #pragma once
+#ifndef AUDIOPP_UI_HPP
+#define AUDIOPP_UI_HPP
 
 #include <atomic>
 #include <chrono>
@@ -46,3 +48,5 @@ void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, Audi
 void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState);
 
 void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);
+
+#endif

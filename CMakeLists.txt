@@ -30,8 +30,8 @@ set(SRC_FILES src/main.cpp
         src/ui.cpp
         src/command_mode_and_pipe.cpp
         src/file_commands.cpp
+        src/sort_commands.cpp
         src/animations.cpp
-        src/sort_types.cpp
         src/help.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})

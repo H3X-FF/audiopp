@@ -1,4 +1,6 @@
 #pragma once
+#ifndef AUDIOPP_STATES_HPP
+#define AUDIOPP_STATES_HPP
 
 #include <filesystem>
 #include <vector>
@@ -81,3 +83,7 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay);
 
 /** @brief Scans the designated audio directory for audio files. */
 void getAudioFiles(AppState& appState);
+
+void printError(std::string msg);
+
+#endif

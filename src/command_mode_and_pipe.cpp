@@ -10,29 +10,13 @@
 
 #include "file_commands.hpp"
 #include "command_mode_and_pipe.hpp"
-
 #include "states.hpp"
+#include "sort_commands.hpp"
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
 #define BACKSPACE_8 8
 #define BACKSPACE_127 127
-
-void CommandPipe::validate::printError(std::string msg) {
-    move(LINES-1, 0);
-    clrtoeol();
-    wbkgdset(stdscr, COLOR_PAIR(3));
-    printw("%s", msg.c_str());
-    refresh();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
-
-    move(LINES-1, 0);
-    wbkgdset(stdscr, A_NORMAL);
-    clrtoeol();
-
-    refresh();
-}
 
 void CommandPipe::validate::validateCommand(const std::vector<std::string>& tokens, AppState& appState) {
     // Registry of available commands and their requirements

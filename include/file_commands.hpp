@@ -1,4 +1,6 @@
 #pragma once
+#ifndef AUDIOPP_FILE_COMMANDS_HPP
+#define AUDIOPP_FILE_COMMANDS_HPP
 
 #include <vector>
 #include <string>
@@ -9,4 +11,5 @@
 void scan(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState);
 void rm(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState);
 void rname(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState);
-void sortList(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState);
+
+#endif
