@@ -1,3 +1,9 @@
 [submodule "external/ncurses"]
 	path = external/ncurses
 	url = https://github.com/mirror/ncurses.git
+[submodule "external/json"]
+	path = external/json
+	url = https://github.com/nlohmann/json.git
+[submodule "external/miniaudio"]
+	path = external/miniaudio
+	url = https://github.com/mackron/miniaudio.git
