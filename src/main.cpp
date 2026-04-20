@@ -181,9 +181,6 @@ int main() {
                     player.triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
 
                     appState.playingIndex = appState.currSelectionIndex;
-                    appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
-                    appState.shouldRedraw = true;
-
                     break;
             }
         }
@@ -230,6 +227,10 @@ int main() {
             player.playPrevious(audioState, appState);
         }
 
+        if (audioState.load() == AudioState::FAILED) {
+            player.terminateAudioThread();
+            printError("Failed to initialize device");
+        }
 
     }
 

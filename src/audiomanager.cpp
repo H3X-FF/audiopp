@@ -11,16 +11,37 @@
 #include "audiomanager.hpp"
 #include "states.hpp"
 
+
+namespace {
+    // Resets UI-related playback state when audio stops.
+    void resetUIRelatedStates(AppState* appState) {
+        appState->playingIndex = -1;
+        appState->audioDisplayState.audioName = "";
+    }
+}
+
+// Used to send a stop signal to an existing thread and waits for it to cleanup
 void AudioManager::terminateAudioThread() {
     audioState->store(AudioState::STOPPED); 
     if (audioThread.joinable()) audioThread.join();
 }
-// Resets UI-related playback state when audio stops.
-void uninitializeAppState(AppState* appState, AudioDisplayState* displayState) {
-    appState->playingIndex = -1;
-    appState->audioDisplayState.audioName = "";
 
-    displayState->shouldDrawAudioInfo = true;
+/*
+* Plays audio and sets up the audio thread. It signals a stop first, checks if we can join the thread
+* so that if there's an active thread that thread exits the loop, resets states
+* then the new thread comes in and plays the new audio.
+*/
+void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
+    audioState = audioAtomic;
+
+    // Wait for the existing thread to finish its cleanup before starting a new one
+    terminateAudioThread();
+
+    displayState = dState;
+    appState = aState;
+    audioFile = filePath;
+
+    audioThread = std::thread(&AudioManager::playAndManageAudio, this);
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -40,24 +61,6 @@ void AudioManager::formatElapsed() {
 
     displayState->elapsedMinutes = elapsedMinutes;
     displayState->elapsedSeconds = elapsedSeconds;
-}
-
-/*
-* Plays audio and sets up the audio thread. It signals a stop first, checks if we can join the thread
-* so that if there's an active thread that thread exits the loop, resets states
-* then the new thread comes in and plays the new audio. */
-void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
-    displayState = dState;
-    appState = aState;
-    audioState = audioAtomic;
-    audioFile = filePath;
-
-    audioState->store(AudioState::STOPPED);
-
-    // Wait for the existing thread to finish its cleanup before starting a new one
-    if (audioThread.joinable()) audioThread.join();
-
-    audioThread = std::thread(&AudioManager::playAndManageAudio, this);
 }
 
 void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -213,23 +216,28 @@ AudioState AudioManager::initializeMA() {
     // Set initial seek time to the past to avoid triggering double-press on first load
     lastBackSeekTime = std::chrono::steady_clock::now() - std::chrono::seconds(1);
 
-    displayState->audioName = appState->audioDisplayState.audioName;
-    displayState->duration = getFullAudioDuration();
-    displayState->shouldDrawAudioInfo = true;
-    displayState->displayCurrRepeatMode = true;
-
     return AudioState::SUCCESS;
 }
 
 void AudioManager::playAndManageAudio() {
     if (initializeMA() == AudioState::FAILED) {
-        printError("Failed to initialize device");
-        audioState->store(AudioState::STOPPED);
+        audioState->store(AudioState::FAILED);
+        resetUIRelatedStates(appState);
         return;
     }
 
+    // UI related
+    displayState->audioName = appState->audioFiles[appState->playingIndex].filename().string();
+    displayState->duration = getFullAudioDuration();
+    displayState->shouldDrawAudioInfo = true;
+    displayState->displayCurrRepeatMode = true;
+
     displayState->amplitude = 0.0;
     displayState->visTimer = 0.0;
+
+    appState->shouldRedraw = true;
+
+    //------------
 
     auto lastTime = std::chrono::high_resolution_clock::now();
 
@@ -291,7 +299,7 @@ void AudioManager::playAndManageAudio() {
     if (appState->repeatMode == RepeatModes::REPEAT_OFF &&
         appState->playingIndex == appState->numberOfFiles-1) {
 
-        uninitializeAppState(appState, displayState);
+        resetUIRelatedStates(appState);
         displayState->shouldCleanup = true;
         appState->shouldRedraw = true;
     }
@@ -315,9 +323,7 @@ void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appSt
     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
 
-
-    appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
-    appState.shouldRedraw = true;
+    // appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
 
     appState.shouldPlayNext = false;
 }
@@ -329,8 +335,7 @@ void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &a
     char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
 
-    appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
-    appState.shouldRedraw = true;
+    // appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
 
     appState.shouldPlayPrev = false;
 }
