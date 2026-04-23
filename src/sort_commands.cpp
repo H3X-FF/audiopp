@@ -24,15 +24,27 @@ namespace {
     }
 
     bool sortByLastWriteComparator(const fs::path& a, const fs::path& b, AppState& appState) {
-        auto p1 = last_write_time(a);
-        auto p2 = last_write_time(b);
+        auto it_a = appState.vfs.audioMap.find(a.string());
+        auto it_b = appState.vfs.audioMap.find(b.string());
+
+        if (it_a == appState.vfs.audioMap.end() || it_b == appState.vfs.audioMap.end()) {
+            return a.string() < b.string();
+        }
+        auto p1 = fs::last_write_time(it_a->second);
+        auto p2 = fs::last_write_time(it_b->second);
 
         return p1 > p2;
     }
 
     bool sortBySizeComparator(const fs::path& a, const fs::path& b, AppState& appState) {
-        auto p1 = fs::file_size(a);
-        auto p2 = fs::file_size(b);
+        auto it_a = appState.vfs.audioMap.find(a.string());
+        auto it_b = appState.vfs.audioMap.find(b.string());
+
+        if (it_a == appState.vfs.audioMap.end() || it_b == appState.vfs.audioMap.end()) {
+            return a.string() < b.string();
+        }
+        auto p1 = fs::file_size(it_a->second);
+        auto p2 = fs::file_size(it_b->second);
 
         return p1 > p2;
     }
@@ -56,12 +68,12 @@ namespace {
 void sortByName(AppState& appState) {
 
     if (appState.sortActions.reversed) {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
         return sortByNameComparator(b, a, appState);
         });
     }
     else {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
             return sortByNameComparator(a, b, appState);
         });
     }
@@ -70,12 +82,12 @@ void sortByName(AppState& appState) {
 
 void sortByLastWrite(AppState& appState) {
     if (appState.sortActions.reversed) {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
             return sortByLastWriteComparator(b, a, appState);
         });
     }
     else {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
         return sortByLastWriteComparator(a, b, appState);
         });
     }
@@ -83,12 +95,12 @@ void sortByLastWrite(AppState& appState) {
 
 void sortBySize(AppState& appState) {
     if (appState.sortActions.reversed) {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
             return sortBySizeComparator(b, a, appState);
         });
     }
     else {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
         return sortBySizeComparator(a, b, appState);
         });
     }
@@ -96,12 +108,12 @@ void sortBySize(AppState& appState) {
 
 void sortByExtension(AppState& appState) {
     if (appState.sortActions.reversed) {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
             return sortByExtensionComparator(b, a, appState);
         });
     }
     else {
-        std::sort(appState.audioFiles.begin(), appState.audioFiles.end(), [&](const fs::path& a, const fs::path& b) {
+        std::sort(appState.vfs.audioFileNames.begin(), appState.vfs.audioFileNames.end(), [&](const fs::path& a, const fs::path& b) {
         return sortByExtensionComparator(a, b, appState);
         });
     }
@@ -122,5 +134,6 @@ void sortList(const std::vector<std::string>& args, const std::vector<std::strin
     appState.sortActions.sortType = args[0];
     appState.sortActions.reversed = (!flags.empty() && flags[0] == "--reverse");
 
+    // Sorting will be handled when the list is refreshed
     appState.shouldRefreshFiles = true;
 }

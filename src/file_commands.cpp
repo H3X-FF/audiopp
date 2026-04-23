@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
+#include <fstream>
+#include <iostream>
+
+#include <json/single_include/nlohmann/json.hpp>
+
+using nlohmann::json;
+using nlohmann::basic_json;
 
 #include "states.hpp"
 #include "file_commands.hpp"
@@ -11,7 +18,7 @@
 namespace fs = std::filesystem;
 
 namespace {
-    void addFilesToAppDir(const fs::directory_entry& entry, const fs::path& audioPath, bool shouldMove) {
+    void addFilesToAppDir(const fs::directory_entry& entry, const fs::path& audioPath, json& playlistObj) {
         std::string fileExtension{entry.path().extension()};
 
         // Case-insensitive extension check
@@ -20,32 +27,11 @@ namespace {
             return std::tolower(c);
         });
 
-        static int deniedFiles = 0;
 
         if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
-            fs::copy(entry.path(), audioPath, fs::copy_options::skip_existing);
-
-            // Removing the file from the original path for the --move option
-            if (shouldMove) {
-                std::error_code ec;
-
-                // Reason for fs::remove instead of move: fs::rename is moody sometimes :P
-                fs::remove(entry.path(), ec);
-
-                if (ec == std::errc::permission_denied) {
-                    deniedFiles++;
-
-                    printError(
-                        "Permission denied for attempting to move " + std::to_string(deniedFiles) +
-                        " files. Copied instead"
-                    );
-
-                }
-
-            }
+            playlistObj[entry.path().filename().string()] = entry.path().string();
         }
 
-        deniedFiles = 0;
     }
 
     bool isNumber(std::string& str) {
@@ -65,29 +51,69 @@ namespace {
         }
     }
 
-//----------------------------------------------------------------------------------------------------------------------
-    void removeFile(std::string& src, AppState& appState) {
-        fs::remove(src);
+    void removeFile(std::string& file, AppState& appState) {
+        std::ifstream ifs(AUDIOPP_FILES_JSON);
+        
+        if (ifs.good()) {
+            
+            try {
+                json j = json::parse(ifs);
+                ifs.close();
+
+                if (j.contains(appState.vfs.currPlaylist)) {
+                    auto& playlistObj = j[appState.vfs.currPlaylist];
+                    playlistObj.erase(file);
+
+                    std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+
+                    ofs << j.dump(4);
+
+                    ofs.close();
+                }
+            }
+            catch (json::exception& e) {
+                printError("Failed to remove file!");
+            }
+        }
     }
 
 
-
-    void renameFile(std::string& src, std::string& dst, AppState& appState) {
+    void renameFile(std::string& oldName, std::string& newName, AppState& appState) {
         fs::path audioppDir = AUDIOPP_PATH;
-        fs::path oldName = audioppDir / src;
 
-        fs::path newName = audioppDir/dst;
+        fs::path oldNameExt = oldName;
+        fs::path newNameExt = newName;
 
-        if (oldName.extension() != newName.extension()) {
-            newName = newName.string() + oldName.extension().string();
+        if (oldNameExt.extension() != newNameExt.extension()) {
+            newName += oldNameExt.extension().string();
         }
 
-        std::error_code ec; // This is just to handle the illegal file ntrash:/3609691475_VSTHEMES-ORG.zipame '/'
+        std::ifstream ifs(AUDIOPP_FILES_JSON);
 
-        fs::rename(oldName, newName, ec);
+        if (ifs.good()) {
+            try {
+                json j = json::parse(ifs);
+                ifs.close();
 
-        if (ec) {
-            printError("Can't name file as: " + src);
+                if (j.contains(appState.vfs.currPlaylist)) {
+                    auto& playlistObj = j[appState.vfs.currPlaylist];
+
+                    if (playlistObj.contains(oldName)) {
+
+                        // Perform the rename
+                        std::swap(playlistObj[newName], playlistObj[oldName]);
+                        playlistObj.erase(oldName);
+
+                        std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+                        ofs << j.dump(4);
+
+                        ofs.close();
+                    }
+                }
+            }
+            catch (const json::exception& e) {
+                printError("Failed to rename file!");
+            }
         }
     }
 
@@ -106,7 +132,7 @@ namespace {
                 return;
             }
 
-            src = appState.audioFiles[srcIdx];
+            src = appState.vfs.audioFileNames[srcIdx];
 
             // Triggers the respective action if it's removing a file or renaming it
             action();
@@ -119,7 +145,7 @@ namespace {
         // If user entered a file name, we search for it. Throw an error if file not found
         for (int i{0}; i < appState.numberOfFiles; i++) {
 
-            if (appState.audioFiles[i].filename() == src) {
+            if (appState.vfs.audioFileNames[i] == src) {
 
                 if (i == appState.playingIndex) {
                     printError("Can't modify an active track");
@@ -127,7 +153,7 @@ namespace {
                 }
 
                 // Triggers the respective action if it's removing a file or renaming it
-                src = appState.audioFiles[i];
+                src = appState.vfs.audioFileNames[i];
                 action();
                 break;
             }
@@ -142,13 +168,11 @@ namespace {
         appState.shouldRefreshFiles = true;
     }
 
-//----------------------------------------------------------------------------------------------------------------------
-
-}
+} // namespace
 
 void scan(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
     fs::path pathToAudioFiles{args[0]};
-    bool isRecursive{false};
+    bool isRecursive{!flags.empty() && flags[0] == "--recurse"};
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
@@ -156,32 +180,40 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
         return;
     }
 
-    bool shouldMove = false;
-
-    // Parse command flags
-    for (int i{0}; i < flags.size(); i++) {
-        if (flags[i] == "--move") shouldMove = true;
-        else if (flags[i] == "--copy") shouldMove = false;
-
-        if (flags[i] == "--recurse") isRecursive = true;
-    }
 
     fs::path audioPath{AUDIOPP_PATH};
 
-    // Non-recursive file scanning and importation
-    if (!isRecursive) {
-        for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
-            addFilesToAppDir(entry, audioPath, shouldMove);
+    std::ifstream ifs{AUDIOPP_FILES_JSON};
+    if (ifs.good()) {
+        try {
+            std::ofstream ofs{AUDIOPP_FILES_JSON, std::ios::trunc};
+            json j;
+
+            // Non-recursive file scanning and importation
+            if (!isRecursive) {
+                for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
+                    addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+                }
+            }
+            // Recursive file scanning and importation
+            else {
+                for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
+                    addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+                }
+            }
+
+            ofs << j.dump(4);
+
+            ofs.close();
+            appState.shouldRefreshFiles = true;
         }
-    }
-    // Recursive file scanning and importation
-    else {
-        for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
-            addFilesToAppDir(entry, audioPath, shouldMove);
+        catch (json::exception& e) {
+            printError("scan failed! Try again later");
         }
     }
 
-    appState.shouldRefreshFiles = true;
+    ifs.close();
+
 }
 
 void rm(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {

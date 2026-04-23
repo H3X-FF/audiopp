@@ -6,6 +6,10 @@
 
 #include"sort_commands.hpp"
 
+void initializeVfs(VirtualFS& vfs) {
+    vfs.currPlaylist = "main";
+}
+
 void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
     appState.shouldCheckForScroll = false;
@@ -44,43 +48,10 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
     audioDisplay.repeatModeInfo = "All";
 }
 
-void getAudioFiles(AppState& appState) {
-    fs::path audioPath{AUDIOPP_PATH};
-
-    if (!fs::exists(audioPath)) fs::create_directories(audioPath);
-
-    for (const auto entry : fs::directory_iterator(audioPath)) {
-        std::string fileExtension{entry.path().extension()};
-
-        // Case-insensitive extension check
-        std::transform(fileExtension.begin(), fileExtension.end(),
-            fileExtension.begin(), [](unsigned char c) {
-            return std::tolower(c);
-        });
-
-        if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
-            appState.audioFiles.push_back(entry.path());
-        }
-    }
-
-    if (appState.sortActions.sortType == "name") {
-        sortByName(appState);
-    }
-    else if (appState.sortActions.sortType == "lwt") {
-        sortByLastWrite(appState);
-    }
-    else if (appState.sortActions.sortType == "size") {
-        sortBySize(appState);
-    }
-    else if (appState.sortActions.sortType == "ext") {
-        sortByExtension(appState);
-    }
-}
-
 void printError(std::string msg) {
     move(LINES-1, 0);
     clrtoeol();
-    wbkgdset(stdscr, COLOR_PAIR(3));
+    wbkgdset(stdscr, COLOR_PAIR(3) | A_BOLD);
     printw("%s", msg.c_str());
     refresh();
 

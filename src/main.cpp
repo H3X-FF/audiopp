@@ -3,7 +3,6 @@
 #include <vector>
 #include <filesystem>
 #include <signal.h>
-#include <unistd.h>
 
 #include <ncursesw/ncurses.h>
 
@@ -12,6 +11,7 @@
 #include "ui.hpp"
 #include "command_mode_and_pipe.hpp"
 #include "help.hpp"
+#include "vfs.hpp"
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
@@ -34,6 +34,9 @@ int main() {
     initializeTerminal();
     initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
     initializeAppState(appState);
+    initializeVfs(appState.vfs);
+
+    initializeDirAndFiles(appState);
     initializeAudioDisplayState(appState.audioDisplayState);
 
     while (running) {
@@ -176,11 +179,10 @@ int main() {
                     if (appState.numberOfFiles == 0 ||appState.inCommandMode ||
                         appState.currSelectionIndex == appState.playingIndex) break;
 
-                    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.currSelectionIndex].c_str())};
-
-                    player.triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
+                    char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.currSelectionIndex]].c_str());
 
                     appState.playingIndex = appState.currSelectionIndex;
+                    player.triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
                     break;
             }
         }

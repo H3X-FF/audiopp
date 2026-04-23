@@ -4,13 +4,16 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <filesystem>
 
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio/miniaudio.h>
 
 #include "audiomanager.hpp"
 #include "states.hpp"
+#include "file_commands.hpp"
 
+namespace fs = std::filesystem;
 
 namespace {
     // Resets UI-related playback state when audio stops.
@@ -18,9 +21,9 @@ namespace {
         appState->playingIndex = -1;
         appState->audioDisplayState.audioName = "";
     }
-}
+} // namespace
 
-// Used to send a stop signal to an existing thread and waits for it to cleanup
+// Used to send a stop signal to an existing thread and waits for it to clean up
 void AudioManager::terminateAudioThread() {
     audioState->store(AudioState::STOPPED); 
     if (audioThread.joinable()) audioThread.join();
@@ -32,13 +35,25 @@ void AudioManager::terminateAudioThread() {
 * then the new thread comes in and plays the new audio.
 */
 void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic, char* filePath) {
+
     audioState = audioAtomic;
+    appState = aState;
+
+    if (!fs::exists(filePath)) {
+        printError("File not found!");
+        audioState->store(AudioState::STOPPED);
+
+        std::string fileName = appState->vfs.audioFileNames[appState->playingIndex];
+        resetUIRelatedStates(appState);
+        rm({fileName}, {}, *appState);
+
+        return;
+    }
 
     // Wait for the existing thread to finish its cleanup before starting a new one
     terminateAudioThread();
 
     displayState = dState;
-    appState = aState;
     audioFile = filePath;
 
     audioThread = std::thread(&AudioManager::playAndManageAudio, this);
@@ -227,7 +242,7 @@ void AudioManager::playAndManageAudio() {
     }
 
     // UI related
-    displayState->audioName = appState->audioFiles[appState->playingIndex].filename().string();
+    displayState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
     displayState->duration = getFullAudioDuration();
     displayState->shouldDrawAudioInfo = true;
     displayState->displayCurrRepeatMode = true;
@@ -320,7 +335,7 @@ void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appSt
     // Increment index with wrapping to the start of the list
     appState.playingIndex = (appState.playingIndex + 1) % appState.numberOfFiles;
 
-    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
+    char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.playingIndex]].c_str());
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
 
     // appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
@@ -332,7 +347,7 @@ void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &a
     // Decrement index with wrapping to the end of the list
     appState.playingIndex = (appState.playingIndex - 1 + appState.numberOfFiles) % appState.numberOfFiles;
 
-    char* audioFilePath{const_cast<char*>(appState.audioFiles[appState.playingIndex].c_str())};
+    char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.playingIndex]].c_str());
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
 
     // appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();

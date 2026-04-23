@@ -15,8 +15,8 @@ namespace {
         int termHeight, termWidth;
         getmaxyx(stdscr, termHeight, termWidth);
 
-        int xPadding = 10;
-        int yPadding = 5;
+        int xPadding = 5;
+        int yPadding = 2;
 
         int windowHeight = termHeight - yPadding;
         int windowWidth = termWidth - xPadding;

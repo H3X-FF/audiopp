@@ -2,8 +2,6 @@
 #include <sstream>
 #include <vector>
 #include <unordered_map>
-#include <thread>
-#include <chrono>
 #include <iomanip>
 
 #include <ncursesw/ncurses.h>
@@ -22,7 +20,7 @@ void CommandPipe::validate::validateCommand(const std::vector<std::string>& toke
     // Registry of available commands and their requirements
     static std::unordered_map<std::string, CommandProperties> commandRegistry{
 
-        {"scan", {1, {"--move", "--copy", "--recurse"}, scan}},
+        {"scan", {1, {"--recurse"}, scan}},
         {"rm", {1, {}, rm}},
         {"rename", {2, {}, rname}},
         {"sort", {1, {"--normal", "--reverse"}, sortList}}
@@ -77,6 +75,9 @@ void CommandPipe::setUpCommand(std::string prompt, AppState& appState) {
     validate::validateCommand(tokens, appState);
 }
 
+
+
+// The input field
 void commandMode(AppState& appState) {
     char command[512];
 

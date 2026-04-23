@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
@@ -51,6 +52,13 @@ struct SortCommandActions {
     bool reversed;
 };
 
+struct VirtualFS {
+    // Will be used for the future when playlists are added. For now it's used for "main":
+    std::string currPlaylist;
+    std::unordered_map<std::string, std::string> audioMap;
+    std::vector<std::string> audioFileNames;
+};
+
 /** @brief Global application state including UI positions and track metadata. */
 struct AppState {
     bool shouldRedraw;
@@ -62,8 +70,6 @@ struct AppState {
     bool shouldPlayPrev;
     bool shouldChangeRepeatMode;
 
-    std::vector<fs::path> audioFiles;
-
     RepeatModes repeatMode;
 
     int playingIndex;
@@ -73,16 +79,16 @@ struct AppState {
 
     AudioDisplayState audioDisplayState;
     SortCommandActions sortActions;
+    VirtualFS vfs;
 };
+
+void initializeVfs(VirtualFS& vfs);
 
 /** @brief Sets default values for the AppState. */
 void initializeAppState(AppState& appState);
 
 /** @brief Sets default values for the AudioDisplayState. */
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay);
-
-/** @brief Scans the designated audio directory for audio files. */
-void getAudioFiles(AppState& appState);
 
 void printError(std::string msg);
 

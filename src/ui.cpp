@@ -7,6 +7,7 @@
 
 #include "states.hpp"
 #include "ui.hpp"
+#include "vfs.hpp"
 
 #include <bits/this_thread_sleep.h>
 
@@ -18,10 +19,10 @@ void initializeTerminal() {
     start_color();
 
 
-    init_pair(1, COLOR_BLACK, COLOR_WHITE);
+    init_pair(1, COLOR_BLACK, COLOR_WHITE); // This exists since the beginning and I had no idea about A_REVERSE
     init_pair(2, COLOR_WHITE, COLOR_BLUE);
-    init_pair(3, COLOR_WHITE, COLOR_RED);
 
+    init_pair(3, COLOR_RED, 0);
     init_pair(4, COLOR_BLUE, 0);
     init_pair(5, COLOR_MAGENTA, 0);
 
@@ -148,7 +149,7 @@ void displayFiles(WINDOW*& fileWindow, AppState& appState) {
             if (currentItem == appState.currSelectionIndex) pair = 1;
             else if (currentItem == appState.playingIndex) pair = 2;
 
-            filename = appState.audioFiles[currentItem].filename();
+            filename = appState.vfs.audioFileNames[currentItem];
 
             wbkgdset(fileWindow, COLOR_PAIR(pair));
             wclrtoeol(fileWindow);
@@ -187,14 +188,14 @@ void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioV
 }
 
 void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
-    appState.audioFiles.clear();
+
     getAudioFiles(appState);
-    appState.numberOfFiles = appState.audioFiles.size();
+    appState.numberOfFiles = appState.vfs.audioFileNames.size();
 
     // Helps maintain playing highlighter after refresh
     if (appState.playingIndex != -1) {
-        for (int i = 0; i < appState.audioFiles.size(); i++) {
-            if (appState.audioDisplayState.audioName == appState.audioFiles[i].filename()) {
+        for (int i = 0; i < appState.vfs.audioFileNames.size(); i++) {
+            if (appState.audioDisplayState.audioName == appState.vfs.audioFileNames[i]) {
                 appState.playingIndex = i;
                 break;
             }
