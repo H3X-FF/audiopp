@@ -25,8 +25,11 @@ namespace {
 
 // Used to send a stop signal to an existing thread and waits for it to clean up
 void AudioManager::terminateAudioThread() {
-    audioState->store(AudioState::STOPPED); 
+    if (!audioThreadActive) return; // if there's no active thread, then we simply return
+
+    audioState->store(AudioState::STOPPED);
     if (audioThread.joinable()) audioThread.join();
+    audioThreadActive = false;
 }
 
 /*
@@ -39,9 +42,14 @@ void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aStat
     audioState = audioAtomic;
     appState = aState;
 
+    // Wait for the existing thread to finish its cleanup before starting a new one
+    terminateAudioThread();
+
+    audioThreadActive = false;
+    audioFinished = false;
+
     if (!fs::exists(filePath)) {
         printError("File not found!");
-        audioState->store(AudioState::STOPPED);
 
         std::string fileName = appState->vfs.audioFileNames[appState->playingIndex];
         resetUIRelatedStates(appState);
@@ -50,13 +58,11 @@ void AudioManager::triggerAudioThread(AudioDisplayState* dState, AppState* aStat
         return;
     }
 
-    // Wait for the existing thread to finish its cleanup before starting a new one
-    terminateAudioThread();
-
     displayState = dState;
     audioFile = filePath;
 
     audioThread = std::thread(&AudioManager::playAndManageAudio, this);
+    audioThreadActive = true;
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -221,7 +227,6 @@ AudioState AudioManager::initializeMA() {
     totalSeconds = static_cast<double>(totalFrames) / deviceConfig.sampleRate;
 
     totalElapsedTime = 0;
-    audioFinished = false;
 
     frameOffset = 5 * deviceConfig.sampleRate; // 5 seconds in frame
 
@@ -312,7 +317,7 @@ void AudioManager::playAndManageAudio() {
 
 
     if (appState->repeatMode == RepeatModes::REPEAT_OFF &&
-        appState->playingIndex == appState->numberOfFiles-1) {
+        appState->playingIndex == appState->numberOfFiles-1 && audioFinished) {
 
         resetUIRelatedStates(appState);
         displayState->shouldCleanup = true;
@@ -334,6 +339,7 @@ void AudioManager::uninitializeMA() {
 void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appState) {
     // Increment index with wrapping to the start of the list
     appState.playingIndex = (appState.playingIndex + 1) % appState.numberOfFiles;
+    // appState.audioDisplayState.audioName = appState.vfs.audioFileNames[appState.playingIndex];
 
     char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.playingIndex]].c_str());
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
@@ -346,6 +352,7 @@ void AudioManager::playNext(std::atomic<AudioState>& audioState, AppState& appSt
 void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &appState) {
     // Decrement index with wrapping to the end of the list
     appState.playingIndex = (appState.playingIndex - 1 + appState.numberOfFiles) % appState.numberOfFiles;
+    // appState.audioDisplayState.audioName = appState.vfs.audioFileNames[appState.playingIndex];
 
     char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.playingIndex]].c_str());
     this->triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
@@ -353,4 +360,8 @@ void AudioManager::playPrevious(std::atomic<AudioState> &audioState, AppState &a
     // appState.audioDisplayState.audioName = appState.audioFiles[appState.playingIndex].filename();
 
     appState.shouldPlayPrev = false;
+}
+
+AudioManager::~AudioManager() {
+    terminateAudioThread();
 }

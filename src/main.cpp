@@ -66,7 +66,7 @@ int main() {
 
                     if (shouldExit) {
                         running = false;
-                        if (audioState.load() != AudioState::STOPPED) player.terminateAudioThread();
+                        // if (audioState.load() != AudioState::STOPPED) player.terminateAudioThread();
                     }
 
                     move(LINES-1, 0);
@@ -182,6 +182,7 @@ int main() {
                     char* audioFilePath = const_cast<char*>(appState.vfs.audioMap[appState.vfs.audioFileNames[appState.currSelectionIndex]].c_str());
 
                     appState.playingIndex = appState.currSelectionIndex;
+                    // appState.audioDisplayState.audioName = appState.vfs.audioFileNames[appState.playingIndex];
                     player.triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
                     break;
             }

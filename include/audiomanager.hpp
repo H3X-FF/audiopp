@@ -42,6 +42,7 @@ class AudioManager {
     double totalElapsedTime;
 
     bool audioFinished;
+    bool audioThreadActive;
 
     std::chrono::time_point<std::chrono::steady_clock> lastBackSeekTime;
 
@@ -79,6 +80,8 @@ public:
 
     void playNext(std::atomic<AudioState>& audioState, AppState& appState);
     void playPrevious(std::atomic<AudioState> &audioState, AppState &appState);
+
+    ~AudioManager();
 };
 
 #endif
