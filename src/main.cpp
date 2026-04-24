@@ -190,6 +190,10 @@ int main() {
 
 
         // Just a bunch of state checks
+        if (appState.shouldCheckForScroll) {
+            scrollList(fileWindow, appState);
+        }
+
         if (appState.shouldRedraw) {
             redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
         }
@@ -200,10 +204,6 @@ int main() {
 
         if (appState.shouldResize) {
             resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, appState, lastResizeTime);
-        }
-
-        if (appState.shouldCheckForScroll) {
-            scrollList(fileWindow, appState);
         }
 
         if (appState.audioDisplayState.shouldRenderAnimation) {

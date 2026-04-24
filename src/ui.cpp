@@ -12,7 +12,7 @@
 #include <bits/this_thread_sleep.h>
 
 #include "animations.hpp"
-
+#include <iostream>
 void initializeTerminal() {
     setlocale(LC_ALL, "");
     initscr();
@@ -83,12 +83,13 @@ void scrollList(WINDOW*& fileWindow, AppState &appState) {
         appState.topIndex = appState.currSelectionIndex - fileWindowHeight + 1;
     }
 
-
     if (appState.topIndex + fileWindowHeight > appState.numberOfFiles) {
         appState.topIndex = appState.numberOfFiles - fileWindowHeight;
 
         if (appState.topIndex < 0) appState.topIndex = 0;
     }
+
+    appState.shouldCheckForScroll = false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
