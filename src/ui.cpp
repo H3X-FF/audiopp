@@ -2,17 +2,18 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <thread>
+#include <cmath>
 
 #include <ncursesw/ncurses.h>
 
 #include "states.hpp"
 #include "ui.hpp"
 #include "vfs.hpp"
-
-#include <bits/this_thread_sleep.h>
-
 #include "animations.hpp"
-#include <iostream>
+
+#define X_START_POS (2)
+
 void initializeTerminal() {
     setlocale(LC_ALL, "");
     initscr();
@@ -121,8 +122,9 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
 
         // Prevents drawing "info" after resizing but nothing is playing
         if (appState.playingIndex != -1) {
+            // This is for displaying the info on the audio window after resizing, otherwise they would disappear
             appState.audioDisplayState.shouldDrawAudioInfo = appState.playingIndex != -1;
-            appState.audioDisplayState.displayCurrRepeatMode = true;
+            appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
         }
     }
 }
@@ -227,8 +229,6 @@ void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, Audi
     displayState.shouldRenderAnimation = false;
 }
 
-const int X_POS = 2;
-
 void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
 
     int yPos = 1;
@@ -239,7 +239,7 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
     wattron(audioInfoWindow, COLOR_PAIR(4));
     wattron(audioInfoWindow, WA_BOLD);
 
-    wmove(audioInfoWindow, yPos, X_POS);
+    wmove(audioInfoWindow, yPos, X_START_POS);
     wclrtoeol(audioInfoWindow);
 
     if (audioName.length() >= limit) {
@@ -263,16 +263,43 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
     displayState.shouldDrawAudioInfo = false;
 }
 
-void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
+void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
     int yPos = 6; // Note: timer is at y-pos 4
+    int rightXPadding = 30;
+    int volumeToDisplay = static_cast<int>(std::round(displayState.volume * 100));
 
-    wmove(audioInfoWindow, yPos, X_POS);
+    int winWidth = getmaxx(audioInfoWindow);
+    int barWidth = winWidth - rightXPadding;
+    int segments = (displayState.volume * barWidth)+0.5;
+
+    wmove(audioInfoWindow, yPos, X_START_POS);
     wclrtoeol(audioInfoWindow);
 
     wattron(audioInfoWindow, COLOR_PAIR(4));
     wattron(audioInfoWindow, WA_BOLD);
 
-    wprintw(audioInfoWindow, "Repeat Mode: %s", displayState.repeatModeInfo.c_str());
+    std::string volTxt = "Volume: ";
+
+    size_t volTxtLen = volTxt.length();
+    int barXPos = volTxtLen + X_START_POS;
+
+    wprintw(audioInfoWindow, "%s", volTxt.c_str());
+
+    for (int i = 0; i < barWidth; i++) {
+        if (i < segments) {
+            mvwaddwstr(audioInfoWindow, yPos, i+barXPos, L"█");
+        }
+        else {
+            mvwaddwstr(audioInfoWindow, yPos, i+barXPos, L"▒");
+        }
+    }
+
+    int currX = getcurx(audioInfoWindow);
+    wprintw(audioInfoWindow, " %d%%", volumeToDisplay);
+
+    currX = getcurx(audioInfoWindow);
+
+    mvwprintw(audioInfoWindow, yPos, currX, " | Repeat %s", displayState.repeatModeInfo.c_str());
 
     wattroff(audioInfoWindow, COLOR_PAIR(4));
     wattroff(audioInfoWindow, WA_BOLD);
@@ -282,7 +309,7 @@ void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState
     refresh();
     wrefresh(audioInfoWindow);
 
-    displayState.displayCurrRepeatMode = false;
+    displayState.shouldUpdateVolOrRepeatTxt = false;
 }
 
 void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState) {

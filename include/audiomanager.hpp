@@ -37,6 +37,7 @@ class AudioManager {
     ma_uint64 totalFrames;
     ma_uint64 frameOffset;
 
+
     double totalSeconds;
     double remainingSeconds;
     double totalElapsedTime;
@@ -70,6 +71,9 @@ class AudioManager {
 
 public:
     bool wasPaused;
+    std::atomic<float> volumeSlider;
+
+    AudioManager();
 
     /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
      *  Writes audio display info to displayState for the TUI to render. */

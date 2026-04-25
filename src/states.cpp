@@ -42,8 +42,8 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
 
     audioDisplay.shouldDrawAudioInfo = false;
     audioDisplay.shouldRenderAnimation = false;
-    audioDisplay.displayCurrRepeatMode = false;
     audioDisplay.shouldCleanup = false;
+    audioDisplay.shouldUpdateVolOrRepeatTxt = false;
 
     audioDisplay.repeatModeInfo = "All";
 }

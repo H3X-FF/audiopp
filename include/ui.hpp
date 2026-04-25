@@ -45,7 +45,7 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
 /** @brief Renders the progress bar and visual */
 void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);
 
-void displayRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState);
+void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState);
 
 void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);
 

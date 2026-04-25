@@ -39,6 +39,7 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_PATH=\"${USR_HOME_DIR}/.audiopp\")
 target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_FILES_JSON=\"${USR_HOME_DIR}/.audiopp/audiopp_files.json\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_SETTINGS=\"${USR_HOME_DIR}/.audiopp/.audiopp\")
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

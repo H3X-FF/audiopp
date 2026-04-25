@@ -32,6 +32,10 @@ void AudioManager::terminateAudioThread() {
     audioThreadActive = false;
 }
 
+AudioManager::AudioManager() {
+    volumeSlider = 0.7f;
+}
+
 /*
 * Plays audio and sets up the audio thread. It signals a stop first, checks if we can join the thread
 * so that if there's an active thread that thread exits the loop, resets states
@@ -158,10 +162,19 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
         return;
     }
 
-
     if (pManager->audioState->load() != AudioState::STOPPED) {
         ma_uint64 framesRead = 0;
         ma_decoder_read_pcm_frames(&pManager->decoder, pOutput, frameCount, &framesRead);
+
+        // Used for volume
+            float* samples = static_cast<float*>(pOutput);
+
+            float gain = std::pow(pManager->volumeSlider.load(std::memory_order_relaxed), 3);
+
+            ma_uint32 sampleCount = frameCount * pDevice->playback.channels;
+            for (int i = 0; i < sampleCount; i++) {
+                samples[i] *= gain;
+            }
 
         // If the decoder provides fewer frames than requested, it means we hit the end of the file
         if (framesRead < frameCount) {
@@ -250,7 +263,9 @@ void AudioManager::playAndManageAudio() {
     displayState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
     displayState->duration = getFullAudioDuration();
     displayState->shouldDrawAudioInfo = true;
-    displayState->displayCurrRepeatMode = true;
+
+    displayState->volume = volumeSlider;
+    displayState->shouldUpdateVolOrRepeatTxt = true;
 
     displayState->amplitude = 0.0;
     displayState->visTimer = 0.0;
@@ -301,7 +316,7 @@ void AudioManager::playAndManageAudio() {
             }
 
             appState->shouldChangeRepeatMode = false;
-            displayState->displayCurrRepeatMode = true;
+            displayState->shouldUpdateVolOrRepeatTxt = true;
         }
 
         // Update display state (but skip during resize to avoid flickering)

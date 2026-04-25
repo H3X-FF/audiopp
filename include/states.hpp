@@ -41,9 +41,11 @@ struct AudioDisplayState {
     double amplitude;
     double visTimer;
 
+    float volume;
+
     bool shouldDrawAudioInfo;
     bool shouldRenderAnimation;
-    bool displayCurrRepeatMode;
+    bool shouldUpdateVolOrRepeatTxt;
     bool shouldCleanup;
 };
 

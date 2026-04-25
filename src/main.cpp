@@ -164,15 +164,38 @@ int main() {
                     break;
                 }
 
+                case ',': // seek backwards
+                    if (audioState.load() == AudioState::PAUSED) player.wasPaused = true;
+                    audioState.store(AudioState::SEEKING_BWD);
+                    break;
+
                 case '.': // seek forward
                     if (audioState.load() == AudioState::PAUSED) player.wasPaused = true;
                     audioState.store(AudioState::SEEKING_FWD);
                     break;
 
-                case ',': // seek backwards
-                    if (audioState.load() == AudioState::PAUSED) player.wasPaused = true;
-                    audioState.store(AudioState::SEEKING_BWD);
+                case '[': // volume down
+                    if (audioState.load() != AudioState::STOPPED) {
+                        float currentVol = player.volumeSlider.load(std::memory_order_relaxed);
+                        float newVol = std::max(0.0f, currentVol - 0.05f);
+                        player.volumeSlider.store(newVol, std::memory_order_relaxed);
+
+                        appState.audioDisplayState.volume = newVol;
+                        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+                    }
                     break;
+
+                case ']': // volume up
+                    if (audioState.load() != AudioState::STOPPED) {
+                        float currentVol = player.volumeSlider.load(std::memory_order_relaxed);
+                        float newVol = std::min(1.0f, currentVol + 0.05f);
+                        player.volumeSlider.store(newVol, std::memory_order_relaxed);
+
+                        appState.audioDisplayState.volume = newVol;
+                        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+                    }
+                    break;
+
 
 
                 case ENTER_KEY:
@@ -214,8 +237,8 @@ int main() {
             displayAudioInfo(audioInfoWindow, appState.audioDisplayState);
         }
 
-        if (appState.audioDisplayState.displayCurrRepeatMode) {
-            displayRepeatMode(audioInfoWindow, appState.audioDisplayState);
+        if (appState.audioDisplayState.shouldUpdateVolOrRepeatTxt) {
+            displayVolAndRepeatMode(audioInfoWindow, appState.audioDisplayState);
         }
 
         if (appState.audioDisplayState.shouldCleanup) {

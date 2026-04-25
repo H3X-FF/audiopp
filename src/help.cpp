@@ -15,8 +15,8 @@ namespace {
         int termHeight, termWidth;
         getmaxyx(stdscr, termHeight, termWidth);
 
-        int xPadding = 5;
-        int yPadding = 2;
+        int xPadding = 3;
+        int yPadding = 1;
 
         int windowHeight = termHeight - yPadding;
         int windowWidth = termWidth - xPadding;
@@ -27,8 +27,6 @@ namespace {
 
         helpWindow = newwin(windowHeight, windowWidth, yPos, xPos);
         scrollok(helpWindow, TRUE);
-
-        createBorder(helpWindow);
 
         refresh();
         wrefresh(helpWindow);
@@ -63,40 +61,57 @@ namespace {
             {"Down Arrow", "Go down in the list"},
             {"ENTER", "Start track"},
             {"SPACE", "Play/Pause active track"},
-            {"r", "Manually refresh file list"},
             {",", "Seek backward"},
             {".", "Seek forward"},
+            {"[", "Volume down"},
+            {"]", "Volume up"},
+            {"r", "Manually refresh file list"},
             {"f", "Go to active track in the list"},
             {"l", "Change repeat mode"},
             {":", "Enter command mode"},
-            {"ESC", "Exit command mode/program"}
+            {"ESC", "Exit command mode/program"},
         };
 
-        const int xPadding = 2;
-        int yPos = 2;
+        int xPadding = 2;
+        int yPos = 1;
+
+        int winHeight, winWidth;
+        getmaxyx(helpWindow, winHeight, winWidth);
 
         mvwprintw(helpWindow, yPos, xPadding, "---KEYS---");
+
+        size_t longestDesc = keysHelp[0].second.size();
 
         for (int i = 0; i < keysHelp.size(); i++) {
             yPos+=2;
 
             wattron(helpWindow, A_REVERSE);
-            mvwprintw(helpWindow, yPos, xPadding, "%s", keysHelp[i].first.c_str());
+            mvwprintw(helpWindow, yPos, xPadding, " %s ", keysHelp[i].first.c_str());
             wattroff(helpWindow, A_REVERSE);
 
-            printWrap(helpWindow, keysHelp[i].second);
+            wprintw(helpWindow, "%s ", keysHelp[i].second.c_str());
+            if (keysHelp[i].second.size() > longestDesc) {
+                longestDesc = keysHelp[i].second.size();
+
+                if (yPos >= winHeight - 5) {
+                    xPadding += longestDesc + 10;
+                    yPos = 2;
+                }
+
+            }
+
         }
 
     //-------------------------------------------------------
-        int winHeight, winWidth;
-        getmaxyx(helpWindow, winHeight, winWidth);
 
         std::string txt = "NEXT>>>";
 
-        int txtPosX = (winWidth - txt.length()) - 2;
+        int txtPosX = (winWidth - txt.length()) - 1;
 
+        // wmove(helpWindow, winHeight-1, txtPosX);
+        // clrtoeol();
         wattron(helpWindow, A_REVERSE);
-        mvwprintw(helpWindow, winHeight-2, txtPosX, "%s", txt.c_str());
+        mvwprintw(helpWindow, winHeight-1, txtPosX, "%s", txt.c_str());
         wattroff(helpWindow, A_REVERSE);
 
 
@@ -107,7 +122,7 @@ namespace {
 
     void displayHelpForCmd(WINDOW*& helpWindow) {
         std::vector<std::pair<std::string, std::string>> cmdHelp {
-            {"scan [DIR]", "scans directory and adds them to the list. Flags: --copy (default) --move --recurse"},
+            {"scan [DIR]", "scans directory and adds them to the list. Flags:  --recurse"},
             {"rm [filename/index]", "removes track. Surround names that have spaces with \'"},
             {"rename [filename/index] [new name]", "Changes file name. Surround names that have spaces with \'"},
             {"sort [sort type]", "sort types: name, lwt(last write time), size, ext (extension)"
@@ -115,7 +130,7 @@ namespace {
         };
 
         const int xPadding = 2;
-        int yPos = 2;
+        int yPos = 1;
 
         mvwprintw(helpWindow, yPos, xPadding, "---COMMANDS---");
 
@@ -168,7 +183,7 @@ void displayHelp(AppState& appState) {
     while (true) {
         ch = getch();
 
-        if (ch == 'h' || ch == ESCAPE_KEY) break;
+        if (ch == 'h' || ch == 'q' || ch == ESCAPE_KEY) break;
 
         if (helpScr == HelpScreens::HELP_KEY && ch == KEY_RIGHT) {
             helpScr = HelpScreens::HELP_CMD;
@@ -176,7 +191,6 @@ void displayHelp(AppState& appState) {
             werase(helpWindow);
             displayHelpForCmd(helpWindow);
 
-            createBorder(helpWindow);
             refresh();
             wrefresh(helpWindow);
         }
@@ -187,19 +201,15 @@ void displayHelp(AppState& appState) {
             werase(helpWindow);
             displayHelpForKeys(helpWindow);
 
-            createBorder(helpWindow);
             refresh();
             wrefresh(helpWindow);
         }
 
         if (ch == KEY_RESIZE) {
-            resize = true;
-        }
-
-        if (resize) {
             if (helpWindow) delwin(helpWindow);
 
             createHelpWindow(helpWindow);
+
 
             if (helpScr == HelpScreens::HELP_KEY) {
                 werase(helpWindow);
@@ -210,11 +220,30 @@ void displayHelp(AppState& appState) {
                 displayHelpForCmd(helpWindow);
             }
 
-            createBorder(helpWindow);
             refresh();
             wrefresh(helpWindow);
+            // resize main UI after exiting the help screen so that it stays accurate to the terminal size
             appState.shouldResize = true;
         }
+
+        // if (resize) {
+        //     if (helpWindow) delwin(helpWindow);
+        //
+        //     createHelpWindow(helpWindow);
+        //
+        //     if (helpScr == HelpScreens::HELP_KEY) {
+        //         werase(helpWindow);
+        //         displayHelpForKeys(helpWindow);
+        //     }
+        //     else {
+        //         werase(helpWindow);
+        //         displayHelpForCmd(helpWindow);
+        //     }
+        //
+        //     refresh();
+        //     wrefresh(helpWindow);
+        //     appState.shouldResize = true;
+        // }
 
     }
 
@@ -222,9 +251,9 @@ void displayHelp(AppState& appState) {
 
     appState.shouldRedraw = true;
 
-    // Avoid writing text while nothing is playing
+    // Avoid writing text while nothing, but display it if something is playing after exiting the help screen
     if (appState.playingIndex != -1) {
         appState.audioDisplayState.shouldDrawAudioInfo = true;
-        appState.audioDisplayState.displayCurrRepeatMode = true;
+        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
     }
 }
