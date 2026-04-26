@@ -24,6 +24,17 @@ void initializeDirAndFiles(AppState& appState) {
         ofs << "{\"main\": {}}";
         ofs.close();
     }
+
+    if (!fs::exists(AUDIOPP_SETTINGS)) {
+        ofs.open(AUDIOPP_SETTINGS, std::ios::trunc);
+
+        ofs << "VOLUME=0.7" << '\n';
+        ofs << "REPEAT_MODE=0" << '\n';
+        ofs << "SORT=name" << '\n';
+        ofs << "SORT_REVERSED=0" << '\n';
+
+        ofs.close();
+    }
 }
 
 void getAudioFiles(AppState& appState) {
@@ -49,7 +60,7 @@ void getAudioFiles(AppState& appState) {
             }
         }
         catch (json::exception& e) {
-            printError("Couldn't load files. try again by pressing \'r\'");
+            printError("Couldn't load files. try again by pressing \'r\'\nOr check audiopp_files.json");
         }
     }
 

@@ -70,7 +70,6 @@ struct AppState {
     bool inCommandMode;
     bool shouldPlayNext;
     bool shouldPlayPrev;
-    bool shouldChangeRepeatMode;
 
     RepeatModes repeatMode;
 

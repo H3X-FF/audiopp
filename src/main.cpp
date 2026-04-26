@@ -1,7 +1,6 @@
 #include <iostream>
 #include <atomic>
 #include <vector>
-#include <filesystem>
 #include <signal.h>
 
 #include <ncursesw/ncurses.h>
@@ -12,6 +11,7 @@
 #include "command_mode_and_pipe.hpp"
 #include "help.hpp"
 #include "vfs.hpp"
+#include "settings.hpp"
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
@@ -19,7 +19,6 @@
 int main() {
     bool running = true;
     AppState appState;
-    AudioManager player;
 
     // Threading and State Management
     std::atomic<AudioState> audioState{AudioState::STOPPED};
@@ -33,12 +32,17 @@ int main() {
 
     initializeTerminal();
     initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
+
     initializeAppState(appState);
+    initializeAudioDisplayState(appState.audioDisplayState);
     initializeVfs(appState.vfs);
 
     initializeDirAndFiles(appState);
-    initializeAudioDisplayState(appState.audioDisplayState);
+    loadSettings(appState);
 
+    AudioManager player(&appState.audioDisplayState, &appState, &audioState);
+
+    //---Program loop---
     while (running) {
         int ch = getch();
 
@@ -145,7 +149,7 @@ int main() {
                 case 'l':
                     appState.repeatMode = static_cast<RepeatModes>((static_cast<int>(appState.repeatMode) + 1) % 3);
 
-                    appState.shouldChangeRepeatMode = true;
+                    appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
 
                     break;
 
@@ -206,7 +210,7 @@ int main() {
 
                     appState.playingIndex = appState.currSelectionIndex;
                     // appState.audioDisplayState.audioName = appState.vfs.audioFileNames[appState.playingIndex];
-                    player.triggerAudioThread(&appState.audioDisplayState, &appState, &audioState, audioFilePath);
+                    player.triggerAudioThread(audioFilePath);
                     break;
             }
         }
@@ -238,7 +242,7 @@ int main() {
         }
 
         if (appState.audioDisplayState.shouldUpdateVolOrRepeatTxt) {
-            displayVolAndRepeatMode(audioInfoWindow, appState.audioDisplayState);
+            displayVolAndRepeatMode(audioInfoWindow, appState, appState.audioDisplayState);
         }
 
         if (appState.audioDisplayState.shouldCleanup) {
@@ -259,6 +263,8 @@ int main() {
         }
 
     }
+
+    saveSettings(appState);
 
     delwin(fileWindow);
     delwin(audioInfoWindow);

@@ -19,14 +19,10 @@ void initializeAppState(AppState& appState) {
     appState.shouldPlayNext = false;
     appState.shouldPlayPrev = false;
 
-    appState.repeatMode = RepeatModes::REPEAT_ALL;
-
     appState.topIndex = 0;
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;
-
-    appState.sortActions.sortType = "name";
 }
 
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
@@ -44,8 +40,6 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
     audioDisplay.shouldRenderAnimation = false;
     audioDisplay.shouldCleanup = false;
     audioDisplay.shouldUpdateVolOrRepeatTxt = false;
-
-    audioDisplay.repeatModeInfo = "All";
 }
 
 void printError(std::string msg) {

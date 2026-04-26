@@ -59,11 +59,8 @@ class AudioManager {
     /** @brief initializes the devices used by miniaudio. */
     AudioState initializeMA();
 
-    /**
-     * @brief Primary playback loop intended to run in a separate thread.
-     * @param audioState Atomic control for thread communication.
-     */
-    void playAndManageAudio();
+    /** @brief Primary thread loop intended to run in a separate thread. */
+    void manageAudioThread();
 
     /** @brief Cleanly shuts down the miniaudio engine and sound objects. */
     void uninitializeMA();
@@ -73,12 +70,11 @@ public:
     bool wasPaused;
     std::atomic<float> volumeSlider;
 
-    AudioManager();
+    AudioManager(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic);
 
     /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
      *  Writes audio display info to displayState for the TUI to render. */
-    void triggerAudioThread(AudioDisplayState* dState, AppState* aState,
-                                    std::atomic<AudioState>* audioAtomic, char* filePath);
+    void triggerAudioThread(char* filePath);
 
     void terminateAudioThread();
 

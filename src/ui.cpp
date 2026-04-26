@@ -263,7 +263,7 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
     displayState.shouldDrawAudioInfo = false;
 }
 
-void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
+void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, AudioDisplayState& displayState) {
     int yPos = 6; // Note: timer is at y-pos 4
     int rightXPadding = 30;
     int volumeToDisplay = static_cast<int>(std::round(displayState.volume * 100));
@@ -298,6 +298,21 @@ void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AudioDisplayState& displa
     wprintw(audioInfoWindow, " %d%%", volumeToDisplay);
 
     currX = getcurx(audioInfoWindow);
+
+    // Sets the displayed text for repeat
+        switch (appState.repeatMode) {
+            case RepeatModes::REPEAT_ALL:
+                displayState.repeatModeInfo = "All";
+                break;
+
+            case RepeatModes::REPEAT_ONE:
+                displayState.repeatModeInfo = "One";
+                break;
+
+            case RepeatModes::REPEAT_OFF:
+                displayState.repeatModeInfo = "Off";
+                break;
+        }
 
     mvwprintw(audioInfoWindow, yPos, currX, " | Repeat %s", displayState.repeatModeInfo.c_str());
 

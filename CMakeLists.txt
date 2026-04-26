@@ -22,7 +22,11 @@ if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR})
 
 endif ()
 
-set(USR_HOME_DIR $ENV{HOME})
+if(APPLE)
+    set(USR_HOME_DIR $ENV{HOME}/Library/Application)
+elseif(LINUX)
+    set(USR_HOME_DIR $ENV{HOME})
+endif()
 
 set(SRC_FILES src/main.cpp
         src/audiomanager.cpp
@@ -33,13 +37,14 @@ set(SRC_FILES src/main.cpp
         src/sort_commands.cpp
         src/animations.cpp
         src/help.cpp
-        src/vfs.cpp)
+        src/vfs.cpp
+        src/settings.cpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_PATH=\"${USR_HOME_DIR}/.audiopp\")
 target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_FILES_JSON=\"${USR_HOME_DIR}/.audiopp/audiopp_files.json\")
-target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_SETTINGS=\"${USR_HOME_DIR}/.audiopp/.audiopp\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_SETTINGS=\"${USR_HOME_DIR}/.audiopp/.audiopp_settings\")
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
