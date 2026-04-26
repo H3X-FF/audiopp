@@ -182,37 +182,52 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
 
 
     fs::path audioPath{AUDIOPP_PATH};
+    json j;
 
-    std::ifstream ifs{AUDIOPP_FILES_JSON};
-    if (ifs.good()) {
+    std::ifstream ifs(AUDIOPP_FILES_JSON);
+
+    if (ifs.is_open()) {
         try {
-            std::ofstream ofs{AUDIOPP_FILES_JSON, std::ios::trunc};
-            json j;
-
-            // Non-recursive file scanning and importation
-            if (!isRecursive) {
-                for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
-                    addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
-                }
-            }
-            // Recursive file scanning and importation
-            else {
-                for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
-                    addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
-                }
+            if (ifs.good()) {
+                j = json::parse(ifs);
             }
 
+            ifs.close();
+        }
+        catch (json::exception& e) {
+            printError("Failed to parse existing library!");
+            return;
+        }
+
+        ifs.close();
+    }
+    try {
+        // Non-recursive file scanning and importation
+        if (!isRecursive) {
+            for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
+                addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+            }
+        }
+        // Recursive file scanning and importation
+        else {
+            for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
+                addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+            }
+        }
+
+        std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+        if (ofs.is_open()) {
             ofs << j.dump(4);
-
             ofs.close();
             appState.shouldRefreshFiles = true;
         }
-        catch (json::exception& e) {
-            printError("scan failed! Try again later");
+        else {
+            printError("Failed to write files to library!");
         }
     }
-
-    ifs.close();
+    catch (json::exception& e) {
+        printError("scan failed! Try again later");
+    }
 
 }
 
