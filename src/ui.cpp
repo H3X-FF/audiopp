@@ -5,7 +5,14 @@
 #include <thread>
 #include <cmath>
 
-#include <ncursesw/ncurses.h>
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
+    #include <windows.h>
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #include "states.hpp"
 #include "ui.hpp"
@@ -15,7 +22,16 @@
 #define X_START_POS (2)
 
 void initializeTerminal() {
-    setlocale(LC_ALL, "");
+
+    #ifdef _WIN32
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+
+        setlocale(LC_ALL, ".UTF8");
+    #endif
+
+        setlocale(LC_ALL, "");
+
     initscr();
     start_color();
 
@@ -29,7 +45,11 @@ void initializeTerminal() {
 
     nl();
     curs_set(0);
-    set_escdelay(25);
+
+    #ifndef _WIN32
+        set_escdelay(25);
+    #endif
+
     keypad(stdscr, TRUE);
     noecho();
     cbreak();
@@ -59,6 +79,11 @@ void initializeWindows(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& a
 }
 
 void createBorder(WINDOW*& window) {
+
+#ifdef _WIN32
+	box(window, 0, 0);
+
+#else
     cchar_t vline, hline, ulc, urc, llc, lrc;
 
     setcchar(&vline, L"│", WA_NORMAL, 0, NULL);
@@ -69,6 +94,7 @@ void createBorder(WINDOW*& window) {
     setcchar(&lrc,   L"╯", WA_NORMAL, 0, NULL);
 
     wborder_set(window, &vline, &vline, &hline, &hline, &ulc, &urc, &llc, &lrc);
+#endif
 }
 
 void scrollList(WINDOW*& fileWindow, AppState &appState) {

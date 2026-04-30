@@ -6,16 +6,20 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <filesystem>
 
 #include <miniaudio/miniaudio.h>
 
 #include "states.hpp"
+
+namespace fs = std::filesystem;
 
 /**
  * @class AudioManager
  * @brief Handles audio initialization, playback, and writes display state.
  */
 class AudioManager {
+
     char* audioFile;
     std::atomic<AudioState>* audioState;
     AppState* appState;

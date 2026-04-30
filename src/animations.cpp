@@ -1,5 +1,10 @@
 #include <cmath>
-#include <ncursesw/ncurses.h>
+
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #include "animations.hpp"
 #include "states.hpp"

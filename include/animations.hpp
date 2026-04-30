@@ -2,7 +2,12 @@
 #ifndef AUDIOPP_ANIMATIONS_HPP
 #define AUDIOPP_ANIMATIONS_HPP
 
-#include <ncursesw/ncurses.h>
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
+
 #include "states.hpp"
 
 void renderOscilloscope(WINDOW*& audioVisualInfo, AudioDisplayState& displayState);

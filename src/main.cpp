@@ -3,7 +3,12 @@
 #include <vector>
 #include <signal.h>
 
-#include <ncursesw/ncurses.h>
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
+
 
 #include "states.hpp"
 #include "audiomanager.hpp"
@@ -155,15 +160,15 @@ int main() {
 
                 case ':': {
                     // Can't risk corruption in the buffer and cursor during command mode!
-                    sigset_t set;
-                    sigemptyset(&set);
-                    sigaddset(&set, SIGWINCH);
+                    //sigset_t set;
+                    //sigemptyset(&set);
+                    //sigaddset(&set, SIGWINCH);
 
-                    sigprocmask(SIG_BLOCK, &set, NULL);
+                    //sigprocmask(SIG_BLOCK, &set, NULL);
 
                     commandMode(appState);
 
-                    sigprocmask(SIG_UNBLOCK, &set, NULL);
+                    //sigprocmask(SIG_UNBLOCK, &set, NULL);
 
                     break;
                 }

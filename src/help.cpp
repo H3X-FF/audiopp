@@ -2,11 +2,15 @@
 #include <vector>
 #include <sstream>
 #include <chrono>
-#include <ncursesw/ncurses.h>
+
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #include "help.hpp"
 #include "states.hpp"
-#include "ui.hpp"
 
 #define ESCAPE_KEY 27
 
@@ -225,25 +229,6 @@ void displayHelp(AppState& appState) {
             // resize main UI after exiting the help screen so that it stays accurate to the terminal size
             appState.shouldResize = true;
         }
-
-        // if (resize) {
-        //     if (helpWindow) delwin(helpWindow);
-        //
-        //     createHelpWindow(helpWindow);
-        //
-        //     if (helpScr == HelpScreens::HELP_KEY) {
-        //         werase(helpWindow);
-        //         displayHelpForKeys(helpWindow);
-        //     }
-        //     else {
-        //         werase(helpWindow);
-        //         displayHelpForCmd(helpWindow);
-        //     }
-        //
-        //     refresh();
-        //     wrefresh(helpWindow);
-        //     appState.shouldResize = true;
-        // }
 
     }
 

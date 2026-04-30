@@ -1,10 +1,13 @@
 #include "states.hpp"
-#include <algorithm>
-#include <ncursesw/ncurses.h>
+
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
+
 #include <thread>
 #include <chrono>
-
-#include"sort_commands.hpp"
 
 void initializeVfs(VirtualFS& vfs) {
     vfs.currPlaylist = "main";
@@ -48,12 +51,12 @@ void printError(std::string msg) {
     wbkgdset(stdscr, COLOR_PAIR(3) | A_BOLD);
     printw("%s", msg.c_str());
     refresh();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
-
-    move(LINES-1, 0);
     wbkgdset(stdscr, A_NORMAL);
-    clrtoeol();
+
+    //std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+    //move(LINES-1, 0);
+    //clrtoeol();
 
     refresh();
 }

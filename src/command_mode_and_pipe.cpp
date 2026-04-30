@@ -4,7 +4,11 @@
 #include <unordered_map>
 #include <iomanip>
 
-#include <ncursesw/ncurses.h>
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #include "file_commands.hpp"
 #include "command_mode_and_pipe.hpp"

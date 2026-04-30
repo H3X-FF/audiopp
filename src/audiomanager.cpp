@@ -56,7 +56,9 @@ void AudioManager::triggerAudioThread(char* filePath) {
     audioFinished = false;
 
     // Validate that the file does exist
-    if (!fs::exists(filePath)) {
+	fs::path pathObj = fs::u8path(filePath);
+
+    if (!fs::exists(pathObj)) {
         printError("File not found!");
 
         std::string fileName = appState->vfs.audioFileNames[appState->playingIndex];
@@ -197,10 +199,15 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
 
 // Initializes miniaudio. After initializing miniaudio, it will set the state to playing.
 AudioState AudioManager::initializeMA() {
+	fs::path pathObj = fs::u8path(audioFile);
     decoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
-    decoderConfig.seekPointCount = 128; // Helps with a smoother seeking especially with mp3s
+    decoderConfig.seekPointCount = 128; // Helps with smoother seeking especially with mp3s
 
-    decoderInitRes = ma_decoder_init_file(audioFile, &decoderConfig, &decoder);
+    #ifdef _WIN32
+        decoderInitRes = ma_decoder_init_file_w(pathObj.c_str(), &decoderConfig, &decoder);
+    #else
+        decoderInitRes = ma_decoder_init_file(pathObj.c_str(), &decoderConfig, &decoder);
+    #endif
 
     if (decoderInitRes != MA_SUCCESS) {
         audioState->store(AudioState::STOPPED);
@@ -256,6 +263,7 @@ AudioState AudioManager::initializeMA() {
 }
 
 void AudioManager::manageAudioThread() {
+
     if (initializeMA() == AudioState::FAILED) {
         audioState->store(AudioState::FAILED);
         resetUIRelatedStates(appState);

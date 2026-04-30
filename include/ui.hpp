@@ -5,7 +5,11 @@
 #include <atomic>
 #include <chrono>
 
-#include <ncursesw/ncurses.h>
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #include "states.hpp"
 

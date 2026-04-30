@@ -7,3 +7,6 @@
 [submodule "external/miniaudio"]
 	path = external/miniaudio
 	url = https://github.com/mackron/miniaudio.git
+[submodule "external/PDCursesMod"]
+	path = external/PDCursesMod
+	url = https://github.com/Bill-Gray/PDCursesMod.git

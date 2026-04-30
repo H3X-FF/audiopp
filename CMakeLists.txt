@@ -4,28 +4,18 @@ project(audiopp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
+if(WIN32)
+#  file(TO_CMAKE_PATH "$ENV{APPDATA}" USR_HOME_DIR)
+  add_compile_definitions(PDC_FORCE_UTF8 PDC_WIDE)
 
-# This was added so it doesn't have to reinstall ncurses every time I modify the damn file!
-if(NOT IS_DIRECTORY ${NCURSES_LOCAL_DIR})
-    execute_process(
-            COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
-    )
+  if(MSVC)
+    add_compile_options(/utf-8)
+    endif()
 
-    execute_process(
-            COMMAND make
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
-    )
-
-    execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
-
-endif ()
-
-if(APPLE)
-    set(USR_HOME_DIR $ENV{HOME}/Library/Application)
-elseif(LINUX)
-    set(USR_HOME_DIR $ENV{HOME})
+#elseif(APPLE)
+#    set(USR_HOME_DIR $ENV{HOME}/Library/Application)
+#else()
+#    set(USR_HOME_DIR $ENV{HOME})
 endif()
 
 set(SRC_FILES src/main.cpp
@@ -40,16 +30,46 @@ set(SRC_FILES src/main.cpp
         src/vfs.cpp
         src/settings.cpp)
 
+if(WIN32)
+    set(PDC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/PDCursesMod")
+
+    file(GLOB PDC_SOURCES 
+        "${PDC_DIR}/pdcurses/*.c"
+        "${PDC_DIR}/wincon/*.c"
+    )
+    list(APPEND SRC_FILES ${PDC_SOURCES})
+    include_directories(${PDC_DIR})
+else()
+    set(NCURSES_LOCAL_DIR "${CMAKE_BINARY_DIR}/ncurses_pkg")
+
+    execute_process(
+            COMMAND ./configure --prefix=${NCURSES_LOCAL_DIR} --with-static --enable-widec
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
+    )
+
+    execute_process(
+            COMMAND make
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses
+    )
+
+    execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external/ncurses)
+
+endif ()
+
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_PATH=\"${USR_HOME_DIR}/.audiopp\")
-target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_FILES_JSON=\"${USR_HOME_DIR}/.audiopp/audiopp_files.json\")
-target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIOPP_SETTINGS=\"${USR_HOME_DIR}/.audiopp/.audiopp_settings\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE 
+    AUDIOPP_PATH="${USR_HOME_DIR}/.audiopp"
+    AUDIOPP_FILES_JSON="${USR_HOME_DIR}/.audiopp/audiopp_files.json"
+    AUDIOPP_SETTINGS="${USR_HOME_DIR}/.audiopp/.audiopp_settings"
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${NCURSES_LOCAL_DIR}/include)
-target_link_directories(${PROJECT_NAME} PRIVATE ${NCURSES_LOCAL_DIR}/lib)
-target_link_libraries(${PROJECT_NAME} PRIVATE ncursesw)
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
+else()
+    target_link_directories(${PROJECT_NAME} PRIVATE ${NCURSES_LOCAL_DIR}/lib)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ncursesw)
+endif ()

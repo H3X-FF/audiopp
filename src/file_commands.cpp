@@ -17,9 +17,10 @@ using nlohmann::basic_json;
 
 namespace fs = std::filesystem;
 
+
 namespace {
     void addFilesToAppDir(const fs::directory_entry& entry, const fs::path& audioPath, json& playlistObj) {
-        std::string fileExtension{entry.path().extension()};
+        std::string fileExtension = entry.path().extension().u8string();
 
         // Case-insensitive extension check
         std::transform(fileExtension.begin(), fileExtension.end(),
@@ -29,7 +30,7 @@ namespace {
 
 
         if (fileExtension == ".wav" || fileExtension == ".flac" || fileExtension == ".mp3") {
-            playlistObj[entry.path().filename().string()] = entry.path().string();
+            playlistObj[entry.path().filename().u8string()] = entry.path().u8string();
         }
 
     }
@@ -85,7 +86,7 @@ namespace {
         fs::path newNameExt = newName;
 
         if (oldNameExt.extension() != newNameExt.extension()) {
-            newName += oldNameExt.extension().string();
+            newName += oldNameExt.extension().u8string();
         }
 
         std::ifstream ifs(AUDIOPP_FILES_JSON);
@@ -176,12 +177,13 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
-        printError("Not a directory: " + pathToAudioFiles.string());
+        printError("Not a directory: " + pathToAudioFiles.u8string());
         return;
     }
 
 
-    fs::path audioPath{AUDIOPP_PATH};
+	std::string p(AUDIOPP_PATH);
+    fs::path audioPath = fs::u8path(p);
     json j;
 
     std::ifstream ifs(AUDIOPP_FILES_JSON);
@@ -225,9 +227,15 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
             printError("Failed to write files to library!");
         }
     }
-    catch (json::exception& e) {
+    catch (const json::exception& e) {
         printError("scan failed! Try again later");
     }
+    catch (const fs::filesystem_error& fe) {
+        printError("Filesystem error during scan: " + std::string(fe.what()));
+	}
+    catch(const std::exception& ex) {
+        printError("An unexpected error occurred during scan: " + std::string(ex.what()));
+	}
 
 }
 
