@@ -11,36 +11,10 @@
 
 using nlohmann::json;
 
-void initializeDirAndFiles(AppState& appState) {
-    std::ofstream ofs;
-
-    if (!fs::exists(AUDIOPP_PATH)) {
-        fs::create_directories(AUDIOPP_PATH);
-    }
-
-    if (!fs::exists(AUDIOPP_FILES_JSON)) {
-        // Initialize with empty object of objects structure
-        ofs.open(AUDIOPP_FILES_JSON, std::ios::trunc);
-        ofs << "{\"main\": {}}";
-        ofs.close();
-    }
-
-    if (!fs::exists(AUDIOPP_SETTINGS)) {
-        ofs.open(AUDIOPP_SETTINGS, std::ios::trunc);
-
-        ofs << "VOLUME=0.7" << '\n';
-        ofs << "REPEAT_MODE=0" << '\n';
-        ofs << "SORT=name" << '\n';
-        ofs << "SORT_REVERSED=0" << '\n';
-
-        ofs.close();
-    }
-}
-
 void getAudioFiles(AppState& appState) {
     appState.vfs.audioFileNames.clear();
 
-    std::fstream ifs(AUDIOPP_FILES_JSON);
+    std::fstream ifs(appState.audioppJsonFile);
 
     if (ifs.good()) {
         try {

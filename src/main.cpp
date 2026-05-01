@@ -40,9 +40,7 @@ int main() {
 
     initializeAppState(appState);
     initializeAudioDisplayState(appState.audioDisplayState);
-    initializeVfs(appState.vfs);
 
-    initializeDirAndFiles(appState);
     loadSettings(appState);
 
     AudioManager player(&appState.audioDisplayState, &appState, &audioState);
@@ -159,16 +157,21 @@ int main() {
                     break;
 
                 case ':': {
-                    // Can't risk corruption in the buffer and cursor during command mode!
-                    //sigset_t set;
-                    //sigemptyset(&set);
-                    //sigaddset(&set, SIGWINCH);
+                    #ifdef _WIN32
+                        // I honestly tried to block resizing on Windows but couldn't manage to get any of them to work
+                        commandMode(appState);
+                    #else
+                        // Can't risk corruption in the buffer and cursor during command mode!
+                        sigset_t set;
+                        sigemptyset(&set);
+                        sigaddset(&set, SIGWINCH);
 
-                    //sigprocmask(SIG_BLOCK, &set, NULL);
+                        sigprocmask(SIG_BLOCK, &set, NULL);
 
-                    commandMode(appState);
+                        commandMode(appState);
 
-                    //sigprocmask(SIG_UNBLOCK, &set, NULL);
+                        sigprocmask(SIG_UNBLOCK, &set, NULL);
+                    #endif
 
                     break;
                 }

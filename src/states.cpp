@@ -9,9 +9,7 @@
 #include <thread>
 #include <chrono>
 
-void initializeVfs(VirtualFS& vfs) {
-    vfs.currPlaylist = "main";
-}
+#include "environment.hpp"
 
 void initializeAppState(AppState& appState) {
     appState.shouldRedraw = true;
@@ -22,10 +20,16 @@ void initializeAppState(AppState& appState) {
     appState.shouldPlayNext = false;
     appState.shouldPlayPrev = false;
 
+    appState.audioppPath = getAudioppPath();
+    appState.audioppJsonFile = getAudioppJsonFile(appState.audioppPath);
+    appState.audioppSettingsFile = getAudioppSettingsFile(appState.audioppPath);
+
     appState.topIndex = 0;
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;
+
+    appState.vfs.currPlaylist = "main";
 }
 
 void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {

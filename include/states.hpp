@@ -78,6 +78,10 @@ struct AppState {
     int currSelectionIndex;
     int numberOfFiles;
 
+    fs::path audioppPath;
+    fs::path audioppJsonFile;
+    fs::path audioppSettingsFile;
+
     AudioDisplayState audioDisplayState;
     SortCommandActions sortActions;
     VirtualFS vfs;

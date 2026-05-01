@@ -5,7 +5,7 @@
 #include "settings.hpp"
 
 void saveSettings(AppState& appState) {
-    std::ofstream settingsFile(AUDIOPP_SETTINGS, std::ios::trunc);
+    std::ofstream settingsFile(appState.audioppSettingsFile, std::ios::trunc);
 
     if (settingsFile.is_open()) {
 
@@ -19,7 +19,7 @@ void saveSettings(AppState& appState) {
 }
 
 void loadSettings(AppState& appState) {
-    std::ifstream settingsFile(AUDIOPP_SETTINGS);
+    std::ifstream settingsFile(appState.audioppSettingsFile);
     std::string line;
 
     if (settingsFile.is_open()) {

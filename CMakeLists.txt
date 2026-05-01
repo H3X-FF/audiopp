@@ -5,17 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(WIN32)
-#  file(TO_CMAKE_PATH "$ENV{APPDATA}" USR_HOME_DIR)
   add_compile_definitions(PDC_FORCE_UTF8 PDC_WIDE)
 
   if(MSVC)
     add_compile_options(/utf-8)
     endif()
 
-#elseif(APPLE)
-#    set(USR_HOME_DIR $ENV{HOME}/Library/Application)
-#else()
-#    set(USR_HOME_DIR $ENV{HOME})
 endif()
 
 set(SRC_FILES src/main.cpp
@@ -28,7 +23,8 @@ set(SRC_FILES src/main.cpp
         src/animations.cpp
         src/help.cpp
         src/vfs.cpp
-        src/settings.cpp)
+        src/settings.cpp
+        src/environment.cpp)
 
 if(WIN32)
     set(PDC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/PDCursesMod")
@@ -57,12 +53,6 @@ else()
 endif ()
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    AUDIOPP_PATH="${USR_HOME_DIR}/.audiopp"
-    AUDIOPP_FILES_JSON="${USR_HOME_DIR}/.audiopp/audiopp_files.json"
-    AUDIOPP_SETTINGS="${USR_HOME_DIR}/.audiopp/.audiopp_settings"
-)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external)

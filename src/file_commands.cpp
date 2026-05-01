@@ -53,7 +53,7 @@ namespace {
     }
 
     void removeFile(std::string& file, AppState& appState) {
-        std::ifstream ifs(AUDIOPP_FILES_JSON);
+        std::ifstream ifs(appState.audioppJsonFile);
         
         if (ifs.good()) {
             
@@ -65,7 +65,7 @@ namespace {
                     auto& playlistObj = j[appState.vfs.currPlaylist];
                     playlistObj.erase(file);
 
-                    std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+                    std::ofstream ofs(appState.audioppJsonFile, std::ios::trunc);
 
                     ofs << j.dump(4);
 
@@ -80,7 +80,7 @@ namespace {
 
 
     void renameFile(std::string& oldName, std::string& newName, AppState& appState) {
-        fs::path audioppDir = AUDIOPP_PATH;
+        // fs::path audioppDir = AUDIOPP_PATH;
 
         fs::path oldNameExt = oldName;
         fs::path newNameExt = newName;
@@ -89,7 +89,7 @@ namespace {
             newName += oldNameExt.extension().u8string();
         }
 
-        std::ifstream ifs(AUDIOPP_FILES_JSON);
+        std::ifstream ifs(appState.audioppJsonFile);
 
         if (ifs.good()) {
             try {
@@ -105,7 +105,7 @@ namespace {
                         std::swap(playlistObj[newName], playlistObj[oldName]);
                         playlistObj.erase(oldName);
 
-                        std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+                        std::ofstream ofs(appState.audioppJsonFile, std::ios::trunc);
                         ofs << j.dump(4);
 
                         ofs.close();
@@ -182,11 +182,10 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
     }
 
 
-	std::string p(AUDIOPP_PATH);
-    fs::path audioPath = fs::u8path(p);
+    //fs::path audioPath = fs::u8path(appState.audioppPath);
     json j;
 
-    std::ifstream ifs(AUDIOPP_FILES_JSON);
+    std::ifstream ifs(appState.audioppJsonFile);
 
     if (ifs.is_open()) {
         try {
@@ -207,17 +206,17 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
         // Non-recursive file scanning and importation
         if (!isRecursive) {
             for (const auto& entry : fs::directory_iterator(pathToAudioFiles)) {
-                addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+                addFilesToAppDir(entry, appState.audioppPath, j[appState.vfs.currPlaylist]);
             }
         }
         // Recursive file scanning and importation
         else {
             for (const auto& entry : fs::recursive_directory_iterator(pathToAudioFiles)) {
-                addFilesToAppDir(entry, audioPath, j[appState.vfs.currPlaylist]);
+                addFilesToAppDir(entry, appState.audioppPath, j[appState.vfs.currPlaylist]);
             }
         }
 
-        std::ofstream ofs(AUDIOPP_FILES_JSON, std::ios::trunc);
+        std::ofstream ofs(appState.audioppJsonFile, std::ios::trunc);
         if (ofs.is_open()) {
             ofs << j.dump(4);
             ofs.close();
