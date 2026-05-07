@@ -1,0 +1,87 @@
+# Audio++
+**Audio++** is a minimal, terminal-based audio player written in modern C++ with a primary focus on a lightweight design and direct interaction.
+<img width="915" height="562" alt="Screenshot_20260507_035339" src="https://github.com/user-attachments/assets/fbcd6e2c-721d-4a59-82f1-15afa2d9359d" />
+It's primarly made for Linux systems, but also support Windows. It should also work on MacOS, though it hasn't been tested.
+
+# Installing and building from source
+
+## Clone the repo
+Inside your terminal, run `git clone --recurse https://github.com/H3X-FF/audiopp.git`
+
+---
+
+**IMPORTANT:** make sure you actually pass `--recurse` to clone its submodules with it.
+
+---
+## Building the project
+Inside the audiopp directory, run the following:
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+---
+
+## Run it
+Now that you have built it, you can run it!<br>
+`./audiopp`
+
+---
+
+# How to use
+You can always press 'h' to see existing keybinds and commands
+
+## Keybinds:
+
+**Up/Down arrow keys** for navigation
+
+**Enter** start currently selected track
+
+**Space** pause/unpause
+
+**,** seek backwards
+
+**.** seek forward
+
+**[** lower volume
+
+**]** raise volume
+
+**f** go to active track
+
+**l** change repeat mode
+
+**:** for command mode
+
+---
+
+## Commands
+**scan [DIR]** Scans the specified directory and adds audio files<br>
+options: --recurse (put after specifying directory)
+
+**rm [filename/index]** Removes a track either by writing the track's name or its number on the list (e.g. rm 5)
+
+**rename [filename/index]** Changes the name of a track (NOTE: This only changes the track's name in the application, not the actual filename stored in disk)
+
+**sort [type]** Sorts the file list.<br>
+Types: name, size, lwt(last write time), ext[ension]<br>
+Options: --normal (default/implicit) --reverse
+
+---
+
+## Current features
+- Minimal and lightweight design
+- Simple keyboard controls
+- Virtual filesystem
+- small set of commands
+- Smooth audio playback
+- Audio controls
+
+## Planned features
+- Playlist support
+- Queues
+- Customization/Theming
+- Improved metadata handling
+- Improved Library handling
