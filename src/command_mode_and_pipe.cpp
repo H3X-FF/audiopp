@@ -3,17 +3,18 @@
 #include <vector>
 #include <unordered_map>
 #include <iomanip>
+#include <algorithm>
+
+#include "file_commands.hpp"
+#include "command_mode_and_pipe.hpp"
+#include "states.hpp"
+#include "sort_commands.hpp"
 
 #ifdef _WIN32
     #include <PDCursesMod/curses.h>
 #else
     #include <ncursesw/ncurses.h>
 #endif
-
-#include "file_commands.hpp"
-#include "command_mode_and_pipe.hpp"
-#include "states.hpp"
-#include "sort_commands.hpp"
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
@@ -35,7 +36,7 @@ void CommandPipe::validate::validateCommand(const std::vector<std::string>& toke
 
     // Validate command existence
     if (commandRegistry.count(command) == 0) {
-        printError("Invalid Command: " + command);
+        printError("Invalid Command: " + command, appState);
 
         return;
     }
@@ -52,13 +53,13 @@ void CommandPipe::validate::validateCommand(const std::vector<std::string>& toke
             flags.push_back(tokens[i]);
         }
         else {
-            printError("Invalid arguments/flags: " + tokens[i]);
+            printError("Invalid arguments/flags: " + tokens[i], appState);
             return;
         }
     }
 
     if (args.size() < commandRegistry[command].minArgs) {
-        printError("Not enough arguments");
+        printError("Not enough arguments", appState);
         return;
     }
 
@@ -86,9 +87,10 @@ void commandMode(AppState& appState) {
     char command[512];
 
     curs_set(1);
-    bkgdset(A_REVERSE);
     move(LINES-1, 0);
     clrtoeol();
+
+    attron(A_BOLD);
     addch(':');
 
     appState.inCommandMode = true;
@@ -122,7 +124,11 @@ void commandMode(AppState& appState) {
         move(LINES-1, (cursorPos - viewOffset) + 1);
         refresh();
 
-        // --- CONTROLS ---
+        if (cmdCh == KEY_RESIZE) {
+            erase();
+            appState.shouldResize = true; // After exiting command mode, the screen will readjust
+        }
+
         if (cmdCh == ESCAPE_KEY) {
             canceled = true;
             break;
@@ -177,8 +183,8 @@ void commandMode(AppState& appState) {
 
     curs_set(0);
     move(LINES-1, 0);
-    bkgdset(A_NORMAL);
     clrtoeol();
+    attroff(A_BOLD);
 
     if (!canceled) {
         command[promptLen] = '\0';
@@ -188,5 +194,5 @@ void commandMode(AppState& appState) {
     command[0] = '\0';
 
     appState.inCommandMode = false;
-    appState.shouldRedraw = true;
+    appState.shouldRedrawScreen = true;
 }

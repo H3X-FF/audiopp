@@ -27,7 +27,7 @@ enum class RepeatModes {
 };
 
 /** @brief State for audio display info, written by AudioManager and read by TUI. */
-struct AudioDisplayState {
+struct AudioInfoState {
     std::string audioName;
     std::string duration;
     std::string repeatModeInfo;
@@ -63,7 +63,8 @@ struct VirtualFS {
 
 /** @brief Global application state including UI positions and track metadata. */
 struct AppState {
-    bool shouldRedraw;
+    bool shouldRedrawScreen;
+    bool shouldRedrawFileList;
     bool shouldRefreshFiles;
     bool shouldCheckForScroll;
     bool shouldResize;
@@ -77,12 +78,13 @@ struct AppState {
     int topIndex;
     int currSelectionIndex;
     int numberOfFiles;
+    int errorTick;
 
     fs::path audioppPath;
     fs::path audioppJsonFile;
     fs::path audioppSettingsFile;
 
-    AudioDisplayState audioDisplayState;
+    AudioInfoState audioDisplayState;
     SortCommandActions sortActions;
     VirtualFS vfs;
 };
@@ -93,8 +95,8 @@ void initializeVfs(VirtualFS& vfs);
 void initializeAppState(AppState& appState);
 
 /** @brief Sets default values for the AudioDisplayState. */
-void initializeAudioDisplayState(AudioDisplayState& audioDisplay);
+void initializeAudioDisplayState(AudioInfoState& audioDisplay);
 
-void printError(std::string msg);
+void printError(std::string msg, AppState& appState);
 
 #endif

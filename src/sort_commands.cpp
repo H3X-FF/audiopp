@@ -122,12 +122,12 @@ void sortByExtension(AppState& appState) {
 void sortList(const std::vector<std::string>& args, const std::vector<std::string>& flags, AppState& appState) {
 
     if (args[0] != "name" && args[0] != "lwt" && args[0] != "size" &&  args[0] != "ext") {
-        printError("Invalid argument for sort");
+        printError("Invalid argument for sort", appState);
         return;
     }
 
     if (flags.size() > 1) {
-        printError("Too many flags!");
+        printError("Too many flags!", appState);
         return;
     }
 

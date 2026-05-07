@@ -5,6 +5,11 @@
 #include <thread>
 #include <cmath>
 
+#include "states.hpp"
+#include "ui.hpp"
+#include "vfs.hpp"
+#include "animations.hpp"
+
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #define NOMINMAX
@@ -14,12 +19,7 @@
     #include <ncursesw/ncurses.h>
 #endif
 
-#include "states.hpp"
-#include "ui.hpp"
-#include "vfs.hpp"
-#include "animations.hpp"
-
-#define X_START_POS (2)
+const int X_START_POS = 2;
 
 void initializeTerminal() {
 
@@ -34,7 +34,6 @@ void initializeTerminal() {
 
     initscr();
     start_color();
-
 
     init_pair(1, COLOR_BLACK, COLOR_WHITE); // This exists since the beginning and I had no idea about A_REVERSE
     init_pair(2, COLOR_WHITE, COLOR_BLUE);
@@ -119,10 +118,6 @@ void scrollList(WINDOW*& fileWindow, AppState &appState) {
     appState.shouldCheckForScroll = false;
 }
 
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-
 void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow,
                AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastResizeTime) {
 
@@ -144,7 +139,7 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
 
         appState.shouldCheckForScroll = true;
         appState.shouldResize = false;
-        appState.shouldRedraw = true;
+        appState.shouldRedrawScreen = true;
 
         // Prevents drawing "info" after resizing but nothing is playing
         if (appState.playingIndex != -1) {
@@ -155,11 +150,9 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
     }
 }
 
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
+void drawFileList(WINDOW*& fileWindow, AppState& appState) {
+    refreshFiles(fileWindow, appState);
 
-void displayFiles(WINDOW*& fileWindow, AppState& appState) {
     int pair;
     int fileWindowWidth = getmaxx(fileWindow) - 2;
     int fileWindowHeight = getmaxy(fileWindow) - 2;
@@ -176,7 +169,7 @@ void displayFiles(WINDOW*& fileWindow, AppState& appState) {
 
         if (currentItem < appState.numberOfFiles) {
             if (currentItem == appState.currSelectionIndex) pair = 1;
-            else if (currentItem == appState.playingIndex) pair = 2;
+            else if (currentItem == appState.playingIndex) pair = 4;
 
             filename = appState.vfs.audioFileNames[currentItem];
 
@@ -198,22 +191,27 @@ void displayFiles(WINDOW*& fileWindow, AppState& appState) {
         }
     }
 
+    createBorder(fileWindow);
+
     wrefresh(fileWindow);
+    refresh();
+
+    appState.shouldRedrawFileList = false;
 }
 
-void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState) {
-    displayFiles(fileWindow, appState);
+void drawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState) {
+    drawFileList(fileWindow, appState);
 
     createBorder(fileWindow);
     createBorder(audioInfoWindow);
     createBorder(audioVisualWindow);
 
-    refresh();
     wrefresh(fileWindow);
     wrefresh(audioInfoWindow);
     wrefresh(audioVisualWindow);
+    refresh();
 
-    appState.shouldRedraw = false;
+    appState.shouldRedrawScreen = false;
 }
 
 void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
@@ -233,34 +231,31 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
     werase(fileWindow);
 
     appState.shouldRefreshFiles = false;
-    appState.shouldRedraw = true;
+    appState.shouldRedrawScreen = true;
 }
 
-void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState) {
-    werase(audioVisualWindow);
+void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioInfoState& audioInfoState) {
 
-    renderOscilloscope(audioVisualWindow, displayState);
+    renderOscilloscope(audioVisualWindow, audioInfoState);
 
     int winWidth = getmaxx(audioInfoWindow);
-    renderProgress(audioInfoWindow, winWidth, displayState);
+    renderProgress(audioInfoWindow, winWidth, audioInfoState);
 
     createBorder(audioInfoWindow);
     createBorder(audioVisualWindow);
 
-    wnoutrefresh(audioInfoWindow);
-    wnoutrefresh(audioVisualWindow);
+    wrefresh(audioInfoWindow);
+    wrefresh(audioVisualWindow);
 
-    doupdate();
-
-    displayState.shouldRenderAnimation = false;
+    audioInfoState.shouldRenderAnimation = false;
 }
 
-void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState) {
+void displayAudioInfo(WINDOW*& audioInfoWindow, AudioInfoState& audioInfoState) {
 
     int yPos = 1;
     int winWidth = getmaxx(audioInfoWindow) - 2;
     int limit = winWidth - 17;
-    std::string audioName = displayState.audioName;
+    std::string audioName = audioInfoState.audioName;
 
     wattron(audioInfoWindow, COLOR_PAIR(4));
     wattron(audioInfoWindow, WA_BOLD);
@@ -282,21 +277,20 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState)
     // Recreating the border since adding things to the window removes some parts :P
     createBorder(audioInfoWindow);
 
-    refresh();
     wrefresh(audioInfoWindow);
+    refresh();
 
-
-    displayState.shouldDrawAudioInfo = false;
+    audioInfoState.shouldDrawAudioInfo = false;
 }
 
-void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, AudioDisplayState& displayState) {
+void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, AudioInfoState& audioInfoState) {
     int yPos = 6; // Note: timer is at y-pos 4
     int rightXPadding = 30;
-    int volumeToDisplay = static_cast<int>(std::round(displayState.volume * 100));
+    int volumeToDisplay = static_cast<int>(std::round(audioInfoState.volume * 100));
 
     int winWidth = getmaxx(audioInfoWindow);
     int barWidth = winWidth - rightXPadding;
-    int segments = (displayState.volume * barWidth)+0.5;
+    int segments = (audioInfoState.volume * barWidth)+0.5;
 
     wmove(audioInfoWindow, yPos, X_START_POS);
     wclrtoeol(audioInfoWindow);
@@ -328,41 +322,41 @@ void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, Audio
     // Sets the displayed text for repeat
         switch (appState.repeatMode) {
             case RepeatModes::REPEAT_ALL:
-                displayState.repeatModeInfo = "All";
+                audioInfoState.repeatModeInfo = "All";
                 break;
 
             case RepeatModes::REPEAT_ONE:
-                displayState.repeatModeInfo = "One";
+                audioInfoState.repeatModeInfo = "One";
                 break;
 
             case RepeatModes::REPEAT_OFF:
-                displayState.repeatModeInfo = "Off";
+                audioInfoState.repeatModeInfo = "Off";
                 break;
         }
 
-    mvwprintw(audioInfoWindow, yPos, currX, " | Repeat %s", displayState.repeatModeInfo.c_str());
+    mvwprintw(audioInfoWindow, yPos, currX, " | Repeat %s", audioInfoState.repeatModeInfo.c_str());
 
     wattroff(audioInfoWindow, COLOR_PAIR(4));
     wattroff(audioInfoWindow, WA_BOLD);
 
     createBorder(audioInfoWindow);
 
-    refresh();
     wrefresh(audioInfoWindow);
+    refresh();
 
-    displayState.shouldUpdateVolOrRepeatTxt = false;
+    audioInfoState.shouldUpdateVolOrRepeatTxt = false;
 }
 
-void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState) {
+void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioInfoState& audioInfoState) {
     werase(audioInfoWindow);
     werase(audioVisualWindow);
 
     createBorder(audioInfoWindow);
     createBorder(audioVisualWindow);
 
-    refresh();
     wrefresh(audioInfoWindow);
     wrefresh(audioVisualWindow);
+    refresh();
 
-    displayState.shouldCleanup = false;
+    audioInfoState.shouldCleanup = false;
 }

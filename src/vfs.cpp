@@ -34,7 +34,7 @@ void getAudioFiles(AppState& appState) {
             }
         }
         catch (json::exception& e) {
-            printError("Couldn't load files. try again by pressing \'r\'\nOr check audiopp_files.json");
+            printError("Couldn't load files. try again by pressing \'r\'\nOr check audiopp_files.json", appState);
         }
     }
 

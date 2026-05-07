@@ -17,7 +17,7 @@ class AudioManager;  // Forward declaration
 
 namespace fs = std::filesystem;
 
-extern const int X_PADDING;
+extern const int X_START_POS;
 
 /** @brief Configures ncurses settings (colors, input modes, locale). */
 void initializeTerminal();
@@ -35,22 +35,21 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
     AppState& appState, std::chrono::time_point<std::chrono::steady_clock>& lastResizeTime);
 
 /** @brief Renders the list of files to the file window with highlighting and determines the top element for scrolling. */
-void displayFiles(WINDOW*& fileWindow, AppState& appState);
+void drawFileList(WINDOW*& fileWindow, AppState& appState);
 
-/** @brief Used to update the UI */
-void redrawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState);
+void drawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AppState& appState);
 
 /** @brief Reconstructs the audioFiles container. */
 void refreshFiles(WINDOW*& fileWindow, AppState& appState);
 
 /** @brief Renders audio info from AudioDisplayState to the audio info window. */
-void displayAudioInfo(WINDOW*& audioInfoWindow, AudioDisplayState& displayState);
+void displayAudioInfo(WINDOW*& audioInfoWindow, AudioInfoState& displayState);
 
 /** @brief Renders the progress bar and visual */
-void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);
+void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioInfoState& displayState);
 
-void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, AudioDisplayState& displayState);
+void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, AudioInfoState& displayState);
 
-void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioDisplayState& displayState);
+void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioInfoState& displayState);
 
 #endif

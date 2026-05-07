@@ -73,7 +73,7 @@ namespace {
                 }
             }
             catch (json::exception& e) {
-                printError("Failed to remove file!");
+                printError("Failed to remove file!", appState);
             }
         }
     }
@@ -113,7 +113,7 @@ namespace {
                 }
             }
             catch (const json::exception& e) {
-                printError("Failed to rename file!");
+                printError("Failed to rename file!", appState);
             }
         }
     }
@@ -124,12 +124,12 @@ namespace {
             int srcIdx = std::stoi(src)-1;
 
             if (srcIdx > appState.numberOfFiles-1 || srcIdx < 0) {
-                printError("Out of range index");
+                printError("Out of range index", appState);
                 return;
             }
 
             if (srcIdx == appState.playingIndex) {
-                printError("Can't modify an active track");
+                printError("Can't modify an active track", appState);
                 return;
             }
 
@@ -149,7 +149,7 @@ namespace {
             if (appState.vfs.audioFileNames[i] == src) {
 
                 if (i == appState.playingIndex) {
-                    printError("Can't modify an active track");
+                    printError("Can't modify an active track", appState);
                     return;
                 }
 
@@ -160,7 +160,7 @@ namespace {
             }
 
             if (i == appState.numberOfFiles - 1) {
-                printError("Invalid source file: " + src);
+                printError("Invalid source file: " + src, appState);
                 return;
             }
 
@@ -177,12 +177,10 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
 
     // Validate source directory
     if (!fs::is_directory(pathToAudioFiles)) {
-        printError("Not a directory: " + pathToAudioFiles.u8string());
+        printError("Not a directory: " + pathToAudioFiles.u8string(), appState);
         return;
     }
 
-
-    //fs::path audioPath = fs::u8path(appState.audioppPath);
     json j;
 
     std::ifstream ifs(appState.audioppJsonFile);
@@ -196,7 +194,7 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
             ifs.close();
         }
         catch (json::exception& e) {
-            printError("Failed to parse existing library!");
+            printError("Failed to parse existing library!", appState);
             return;
         }
 
@@ -223,17 +221,17 @@ void scan(const std::vector<std::string>& args, const std::vector<std::string>& 
             appState.shouldRefreshFiles = true;
         }
         else {
-            printError("Failed to write files to library!");
+            printError("Failed to write files to library!", appState);
         }
     }
     catch (const json::exception& e) {
-        printError("scan failed! Try again later");
+        printError("scan failed! Try again later", appState);
     }
     catch (const fs::filesystem_error& fe) {
-        printError("Filesystem error during scan: " + std::string(fe.what()));
+        printError("Filesystem error during scan: " + std::string(fe.what()), appState);
 	}
     catch(const std::exception& ex) {
-        printError("An unexpected error occurred during scan: " + std::string(ex.what()));
+        printError("An unexpected error occurred during scan: " + std::string(ex.what()), appState);
 	}
 
 }

@@ -1,22 +1,19 @@
-#include <iostream>
 #include <atomic>
 #include <vector>
 #include <signal.h>
-
-#ifdef _WIN32
-    #include <PDCursesMod/curses.h>
-#else
-    #include <ncursesw/ncurses.h>
-#endif
-
 
 #include "states.hpp"
 #include "audiomanager.hpp"
 #include "ui.hpp"
 #include "command_mode_and_pipe.hpp"
 #include "help.hpp"
-#include "vfs.hpp"
 #include "settings.hpp"
+
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 #define ESCAPE_KEY 27
 #define ENTER_KEY '\n'
@@ -73,7 +70,6 @@ int main() {
 
                     if (shouldExit) {
                         running = false;
-                        // if (audioState.load() != AudioState::STOPPED) player.terminateAudioThread();
                     }
 
                     move(LINES-1, 0);
@@ -89,7 +85,7 @@ int main() {
 
                     appState.shouldCheckForScroll = true;
 
-                    appState.shouldRedraw = true;
+                    appState.shouldRedrawFileList = true;
                     break;
                 }
 
@@ -100,7 +96,7 @@ int main() {
 
                     appState.shouldCheckForScroll = true;
 
-                    appState.shouldRedraw = true;
+                    appState.shouldRedrawFileList = true;
                     break;
                 }
 
@@ -144,7 +140,7 @@ int main() {
 
                     appState.shouldCheckForScroll = true;
 
-                    appState.shouldRedraw = true;
+                    appState.shouldRedrawFileList = true;
 
                     break;
 
@@ -157,22 +153,7 @@ int main() {
                     break;
 
                 case ':': {
-                    #ifdef _WIN32
-                        // I honestly tried to block resizing on Windows but couldn't manage to get any of them to work
-                        commandMode(appState);
-                    #else
-                        // Can't risk corruption in the buffer and cursor during command mode!
-                        sigset_t set;
-                        sigemptyset(&set);
-                        sigaddset(&set, SIGWINCH);
-
-                        sigprocmask(SIG_BLOCK, &set, NULL);
-
-                        commandMode(appState);
-
-                        sigprocmask(SIG_UNBLOCK, &set, NULL);
-                    #endif
-
+                    commandMode(appState);
                     break;
                 }
 
@@ -225,12 +206,17 @@ int main() {
 
 
         // Just a bunch of state checks
+
+        if (appState.shouldRedrawScreen) {
+            drawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
+        }
+
         if (appState.shouldCheckForScroll) {
             scrollList(fileWindow, appState);
         }
 
-        if (appState.shouldRedraw) {
-            redrawScreen(fileWindow, audioInfoWindow, audioVisualWindow, appState);
+        if (appState.shouldRedrawFileList) {
+            drawFileList(fileWindow, appState);
         }
 
         if (appState.shouldRefreshFiles) {
@@ -267,7 +253,17 @@ int main() {
 
         if (audioState.load() == AudioState::FAILED) {
             player.terminateAudioThread();
-            printError("Failed to initialize device");
+            printError("Failed to initialize device", appState);
+        }
+
+
+        if (appState.errorTick > 0) {
+            appState.errorTick--;
+        }
+        else {
+            move(LINES-1, 0);
+            clrtoeol();
+            refresh();
         }
 
     }

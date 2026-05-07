@@ -23,12 +23,12 @@ namespace {
     }
 } // namespace
 
-AudioManager::AudioManager(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic) {
+AudioManager::AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic) {
     audioState = audioAtomic;
     appState = aState;
-    displayState = dState;
+    audioInfoState = audInfoState;
 
-    volumeSlider.store(displayState->volume);
+    volumeSlider.store(audioInfoState->volume);
 }
 
 // Used to send a stop signal to an existing thread and waits for it to clean up
@@ -59,7 +59,7 @@ void AudioManager::triggerAudioThread(char* filePath) {
 	fs::path pathObj = fs::u8path(filePath);
 
     if (!fs::exists(pathObj)) {
-        printError("File not found!");
+        printError("File not found!", *appState);
 
         std::string fileName = appState->vfs.audioFileNames[appState->playingIndex];
         resetUIRelatedStates(appState);
@@ -89,10 +89,76 @@ void AudioManager::formatElapsed() {
     int elapsedMinutes = static_cast<int>(totalElapsedTime) / 60;
     int elapsedSeconds = static_cast<int>(totalElapsedTime) % 60;
 
-    displayState->elapsedMinutes = elapsedMinutes;
-    displayState->elapsedSeconds = elapsedSeconds;
+    audioInfoState->elapsedMinutes = elapsedMinutes;
+    audioInfoState->elapsedSeconds = elapsedSeconds;
 }
 
+// Initializes miniaudio. After initializing miniaudio, it will set the state to playing.
+AudioState AudioManager::initializeMA() {
+	fs::path pathObj = fs::u8path(audioFile);
+    decoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
+    decoderConfig.seekPointCount = 128; // Helps with smoother seeking especially with mp3s
+
+    #ifdef _WIN32
+        ma_result decoderInitRes = ma_decoder_init_file_w(pathObj.c_str(), &decoderConfig, &decoder);
+    #else
+        ma_result decoderInitRes = ma_decoder_init_file(pathObj.c_str(), &decoderConfig, &decoder);
+    #endif
+
+    if (decoderInitRes != MA_SUCCESS) {
+        audioState->store(AudioState::STOPPED);
+        return AudioState::FAILED;
+    }
+
+    // Reset playback position for new file
+    frameCursor = 0;
+    totalFrames = 0;
+
+    deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format = decoder.outputFormat;
+    deviceConfig.playback.channels = decoder.outputChannels;
+    deviceConfig.sampleRate = decoder.outputSampleRate;
+    deviceConfig.dataCallback = data_callback;
+    deviceConfig.pUserData = this;
+
+
+    ma_result deviceInitRes = ma_device_init(NULL, &deviceConfig, &device);
+
+    if (deviceInitRes != MA_SUCCESS) {
+        audioState->store(AudioState::STOPPED);
+        ma_decoder_uninit(&decoder);
+        return AudioState::FAILED;
+    }
+
+    ma_result deviceStartRes = ma_device_start(&device);
+
+    if (deviceStartRes != MA_SUCCESS) {
+        audioState->store(AudioState::STOPPED);
+        ma_device_uninit(&device);
+        ma_decoder_uninit(&decoder);
+        return AudioState::FAILED;
+    }
+
+    // Retrieve file length in frames and calculate total duration in seconds
+    ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
+
+    // --- Other ---
+    totalSeconds = static_cast<double>(totalFrames) / deviceConfig.sampleRate;
+
+    totalElapsedTime = 0;
+
+    frameOffset = 5 * deviceConfig.sampleRate; // 5 seconds in frames
+
+    wasPaused = false;
+    audioState->store(AudioState::PLAYING);
+
+    // Set initial seek time to the past to avoid triggering double-press on first load
+    lastBackSeekTime = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+
+    return AudioState::SUCCESS;
+}
+
+// Miniaudio's thread for playback
 void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     AudioManager* pManager{static_cast<AudioManager*>(pDevice->pUserData)};
     AudioState currentState = pManager->audioState->load();
@@ -197,71 +263,6 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
     }
 }
 
-// Initializes miniaudio. After initializing miniaudio, it will set the state to playing.
-AudioState AudioManager::initializeMA() {
-	fs::path pathObj = fs::u8path(audioFile);
-    decoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
-    decoderConfig.seekPointCount = 128; // Helps with smoother seeking especially with mp3s
-
-    #ifdef _WIN32
-        decoderInitRes = ma_decoder_init_file_w(pathObj.c_str(), &decoderConfig, &decoder);
-    #else
-        decoderInitRes = ma_decoder_init_file(pathObj.c_str(), &decoderConfig, &decoder);
-    #endif
-
-    if (decoderInitRes != MA_SUCCESS) {
-        audioState->store(AudioState::STOPPED);
-        return AudioState::FAILED;
-    }
-
-    // Reset playback position for new file
-    frameCursor = 0;
-    totalFrames = 0;
-
-    deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format = decoder.outputFormat;
-    deviceConfig.playback.channels = decoder.outputChannels;
-    deviceConfig.sampleRate = decoder.outputSampleRate;
-    deviceConfig.dataCallback = data_callback;
-    deviceConfig.pUserData = this;
-
-
-    deviceInitRes = ma_device_init(NULL, &deviceConfig, &device);
-
-    if (deviceInitRes != MA_SUCCESS) {
-        audioState->store(AudioState::STOPPED);
-        ma_decoder_uninit(&decoder);
-        return AudioState::FAILED;
-    }
-
-    deviceStartRes = ma_device_start(&device);
-
-    if (deviceStartRes != MA_SUCCESS) {
-        audioState->store(AudioState::STOPPED);
-        ma_device_uninit(&device);
-        ma_decoder_uninit(&decoder);
-        return AudioState::FAILED;
-    }
-
-    // Retrieve file length in frames and calculate total duration in seconds
-    ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
-
-    // --- Other ---
-    totalSeconds = static_cast<double>(totalFrames) / deviceConfig.sampleRate;
-
-    totalElapsedTime = 0;
-
-    frameOffset = 5 * deviceConfig.sampleRate; // 5 seconds in frame
-
-    wasPaused = false;
-    audioState->store(AudioState::PLAYING);
-
-    // Set initial seek time to the past to avoid triggering double-press on first load
-    lastBackSeekTime = std::chrono::steady_clock::now() - std::chrono::seconds(1);
-
-    return AudioState::SUCCESS;
-}
-
 void AudioManager::manageAudioThread() {
 
     if (initializeMA() == AudioState::FAILED) {
@@ -271,17 +272,17 @@ void AudioManager::manageAudioThread() {
     }
 
     // UI related
-    displayState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
-    displayState->duration = getFullAudioDuration();
-    displayState->shouldDrawAudioInfo = true;
+    audioInfoState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
+    audioInfoState->duration = getFullAudioDuration();
+    audioInfoState->shouldDrawAudioInfo = true;
 
-    displayState->volume = volumeSlider;
-    displayState->shouldUpdateVolOrRepeatTxt = true;
+    audioInfoState->volume = volumeSlider;
+    audioInfoState->shouldUpdateVolOrRepeatTxt = true;
 
-    displayState->amplitude = 0.0;
-    displayState->visTimer = 0.0;
+    audioInfoState->amplitude = 0.0;
+    audioInfoState->visTimer = 0.0;
 
-    appState->shouldRedraw = true;
+    appState->shouldRedrawScreen = true;
 
     //------------
 
@@ -290,7 +291,7 @@ void AudioManager::manageAudioThread() {
 
     while (audioState->load() != AudioState::STOPPED) {
         auto currentTime = std::chrono::high_resolution_clock::now();
-        double deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
+        deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
         lastTime = currentTime;
 
         // Sync the current frame cursor with the decoder position
@@ -299,24 +300,23 @@ void AudioManager::manageAudioThread() {
         totalElapsedTime = static_cast<double>(frameCursor) / deviceConfig.sampleRate;
 
         // Increment timer for wave movement
-        displayState->visTimer += 6.0 * deltaTime;
+        audioInfoState->visTimer += 6.0 * deltaTime;
 
         // Handling the visualizer by making a smooth fade in/fade out depending on state
         if (audioState->load() == AudioState::PLAYING) {
             ma_device_start(&device);
-            if (displayState->amplitude < 1.0) displayState->amplitude += 4.0 * deltaTime;
+            if (audioInfoState->amplitude < 1.0) audioInfoState->amplitude += 4.0 * deltaTime;
         }
         else if (audioState->load() == AudioState::PAUSED) {
-            // NOTE: The actual pause happens in data_callback()
-            if (displayState->amplitude > 0) displayState->amplitude -= 4.0 * deltaTime;
+            if (audioInfoState->amplitude > 0) audioInfoState->amplitude -= 4.0 * deltaTime;
         }
 
-        // Update display state (but skip during resize to avoid flickering)
+        // Update display state (skip during resize to avoid flickering/potential crashes)
         if (!appState->shouldResize) {
             formatElapsed();
-            displayState->totalSeconds = totalSeconds;
-            displayState->totalElapsedTime = totalElapsedTime;
-            displayState->shouldRenderAnimation = true;
+            audioInfoState->totalSeconds = totalSeconds;
+            audioInfoState->totalElapsedTime = totalElapsedTime;
+            audioInfoState->shouldRenderAnimation = true;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(60));
@@ -327,8 +327,8 @@ void AudioManager::manageAudioThread() {
         appState->playingIndex == appState->numberOfFiles-1 && audioFinished) {
 
         resetUIRelatedStates(appState);
-        displayState->shouldCleanup = true;
-        appState->shouldRedraw = true;
+        audioInfoState->shouldCleanup = true;
+        appState->shouldRedrawScreen = true;
     }
     else if (audioFinished) appState->shouldPlayNext = true;
 

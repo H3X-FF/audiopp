@@ -1,16 +1,15 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <chrono>
+
+#include "help.hpp"
+#include "states.hpp"
 
 #ifdef _WIN32
     #include <PDCursesMod/curses.h>
 #else
     #include <ncursesw/ncurses.h>
 #endif
-
-#include "help.hpp"
-#include "states.hpp"
 
 #define ESCAPE_KEY 27
 
@@ -234,7 +233,7 @@ void displayHelp(AppState& appState) {
 
     delwin(helpWindow);
 
-    appState.shouldRedraw = true;
+    appState.shouldRedrawScreen = true;
 
     // Avoid writing text while nothing, but display it if something is playing after exiting the help screen
     if (appState.playingIndex != -1) {

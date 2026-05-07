@@ -1,4 +1,8 @@
 #include "states.hpp"
+#include <thread>
+
+#include "environment.hpp"
+
 
 #ifdef _WIN32
     #include <PDCursesMod/curses.h>
@@ -6,15 +10,11 @@
     #include <ncursesw/ncurses.h>
 #endif
 
-#include <thread>
-#include <chrono>
-
-#include "environment.hpp"
-
 void initializeAppState(AppState& appState) {
-    appState.shouldRedraw = true;
+    appState.shouldRedrawScreen = true;
+    appState.shouldRedrawFileList = false;
     appState.shouldCheckForScroll = false;
-    appState.shouldRefreshFiles = true;
+    appState.shouldRefreshFiles = false;
     appState.shouldResize = false;
     appState.inCommandMode = false;
     appState.shouldPlayNext = false;
@@ -28,11 +28,12 @@ void initializeAppState(AppState& appState) {
     appState.currSelectionIndex = 0;
     appState.playingIndex = -1;
     appState.numberOfFiles = 0;
+    appState.errorTick = 0;
 
     appState.vfs.currPlaylist = "main";
 }
 
-void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
+void initializeAudioDisplayState(AudioInfoState& audioDisplay) {
     audioDisplay.audioName = "";
 
     audioDisplay.elapsedMinutes = 0;
@@ -49,7 +50,7 @@ void initializeAudioDisplayState(AudioDisplayState& audioDisplay) {
     audioDisplay.shouldUpdateVolOrRepeatTxt = false;
 }
 
-void printError(std::string msg) {
+void printError(std::string msg, AppState& appState) {
     move(LINES-1, 0);
     clrtoeol();
     wbkgdset(stdscr, COLOR_PAIR(3) | A_BOLD);
@@ -57,10 +58,7 @@ void printError(std::string msg) {
     refresh();
     wbkgdset(stdscr, A_NORMAL);
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1200));
-
-    //move(LINES-1, 0);
-    //clrtoeol();
+    appState.errorTick = 80;
 
     refresh();
 }

@@ -6,7 +6,6 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include <filesystem>
 
 #include <miniaudio/miniaudio.h>
 
@@ -23,7 +22,7 @@ class AudioManager {
     char* audioFile;
     std::atomic<AudioState>* audioState;
     AppState* appState;
-    AudioDisplayState* displayState;
+    AudioInfoState* audioInfoState;
 
     std::thread audioThread;
 
@@ -31,11 +30,6 @@ class AudioManager {
     ma_decoder decoder;
     ma_device_config deviceConfig;
     ma_decoder_config decoderConfig;
-
-    // Results for error checking during initialization
-    ma_result decoderInitRes;
-    ma_result deviceInitRes;
-    ma_result deviceStartRes;
 
     ma_uint64 frameCursor;
     ma_uint64 totalFrames;
@@ -45,6 +39,7 @@ class AudioManager {
     double totalSeconds;
     double remainingSeconds;
     double totalElapsedTime;
+    double deltaTime;
 
     bool audioFinished;
     bool audioThreadActive;
@@ -74,7 +69,7 @@ public:
     bool wasPaused;
     std::atomic<float> volumeSlider;
 
-    AudioManager(AudioDisplayState* dState, AppState* aState, std::atomic<AudioState>* audioAtomic);
+    AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic);
 
     /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
      *  Writes audio display info to displayState for the TUI to render. */
