@@ -52,23 +52,30 @@ namespace {
         }
     }
 
-    void removeFile(std::string& file, AppState& appState) {
+    void removeFile(std::string& src, AppState& appState, int rangeStart, int rangeEnd, bool rangeBased) {
         std::ifstream ifs(appState.audioppJsonFile);
         
         if (ifs.good()) {
-            
             try {
                 json j = json::parse(ifs);
                 ifs.close();
 
+                std::ofstream ofs(appState.audioppJsonFile, std::ios::trunc);
+
                 if (j.contains(appState.vfs.currPlaylist)) {
                     auto& playlistObj = j[appState.vfs.currPlaylist];
-                    playlistObj.erase(file);
 
-                    std::ofstream ofs(appState.audioppJsonFile, std::ios::trunc);
+                    if (rangeBased) {
+                        for (int i = rangeStart; i <= rangeEnd; i++) {
+                            std::string file = appState.vfs.audioFileNames[i];
+                            playlistObj.erase(file);
+                        }
+                    }
+                    else {
+                        playlistObj.erase(src);
+                    }
 
                     ofs << j.dump(4);
-
                     ofs.close();
                 }
             }
@@ -118,7 +125,12 @@ namespace {
         }
     }
 
-    void resolveFile(std::string& src, std::string& dst, AppState& appState, std::function<void()> action) {
+    void resolveFile(std::string& src, std::string& dst, AppState& appState, bool rangeBased, std::function<void()> action) {
+        if (rangeBased) {
+            action();
+            return;
+        }
+
         // If the user entered an index instead of a file name
         if (isNumber(src)) {
             int srcIdx = std::stoi(src)-1;
@@ -240,8 +252,32 @@ void rm(const std::vector<std::string>& args, const std::vector<std::string>& fl
     std::string src{args[0]};
     std::string dst{""};
 
-    resolveFile(src, dst, appState, [&]() {
-        removeFile(src, appState);
+    std::istringstream iss(src);
+    int rangeStart, rangeEnd;
+    char dash;
+    bool rangeBased = false;
+
+    if (iss >> rangeStart >> dash && dash == '-' && iss >> rangeEnd) {
+
+        // decrement for the actual index
+        rangeStart--;
+        rangeEnd--;
+
+        if (rangeStart < 0 || rangeEnd > appState.numberOfFiles-1) {
+            printError("Range out of index range!", appState);
+            return;
+        }
+
+        if (appState.playingIndex >= rangeStart && appState.playingIndex <= rangeEnd) {
+            printError("A track is playing within the range", appState);
+            return;
+        }
+
+        rangeBased = true;
+    }
+
+    resolveFile(src, dst, appState, rangeBased, [&]() {
+        removeFile(src, appState, rangeStart, rangeEnd, rangeBased);
     });
 }
 
@@ -249,7 +285,9 @@ void rname(const std::vector<std::string>& args, const std::vector<std::string>&
     std::string src{args[0]};
     std::string dst{args[1]};
 
-    resolveFile(src, dst, appState, [&]() {
+    bool rangeBased = false;
+
+    resolveFile(src, dst, appState, rangeBased, [&]() {
         renameFile(src, dst, appState);
     });
 }

@@ -59,9 +59,10 @@ You can always press 'h' to see existing keybinds and commands
 
 ## Commands
 **scan [DIR]** Scans the specified directory and adds audio files<br>
-options: --recurse (put after specifying directory)
+options: --recurse
 
 **rm [filename/index]** Removes a track either by writing the track's name or its number on the list (e.g. rm 5)
+You can also remove a range of tracks (e.g. rm 1-5)
 
 **rename [filename/index]** Changes the name of a track (NOTE: This only changes the track's name in the application, not the actual filename stored in disk)
 

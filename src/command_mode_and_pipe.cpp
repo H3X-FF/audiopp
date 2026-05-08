@@ -45,15 +45,15 @@ void CommandPipe::validate::validateCommand(const std::vector<std::string>& toke
 
     // Distinguish between positional arguments and optional flags
     for (int i{1}; i < tokens.size(); i++) {
-        if (args.size() < commandRegistry[command].minArgs) {
-            args.push_back(tokens[i]);
-        }
-        else if (std::find(commandRegistry[command].allowedFlags.begin(), commandRegistry[command].allowedFlags.end(),
+        if (std::find(commandRegistry[command].allowedFlags.begin(), commandRegistry[command].allowedFlags.end(),
             tokens[i]) != commandRegistry[command].allowedFlags.end()) {
             flags.push_back(tokens[i]);
         }
+        else if (args.size() < commandRegistry[command].minArgs) {
+            args.push_back(tokens[i]);
+        }
         else {
-            printError("Invalid arguments/flags: " + tokens[i], appState);
+            printError("Invalid flag: " + tokens[i], appState);
             return;
         }
     }

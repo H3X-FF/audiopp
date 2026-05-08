@@ -189,8 +189,6 @@ int main() {
                     }
                     break;
 
-
-
                 case ENTER_KEY:
                     if (appState.numberOfFiles == 0 ||appState.inCommandMode ||
                         appState.currSelectionIndex == appState.playingIndex) break;

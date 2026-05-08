@@ -126,7 +126,7 @@ namespace {
     void displayHelpForCmd(WINDOW*& helpWindow) {
         std::vector<std::pair<std::string, std::string>> cmdHelp {
             {"scan [DIR]", "scans directory and adds them to the list. Flags:  --recurse"},
-            {"rm [filename/index]", "removes track. Surround names that have spaces with \'"},
+            {"rm [filename/index]", "removes track. You can also remove a range of tracks (e.g. rm 1-5). Surround names that have spaces with \'"},
             {"rename [filename/index] [new name]", "Changes file name. Surround names that have spaces with \'"},
             {"sort [sort type]", "sort types: name, lwt(last write time), size, ext (extension)"
                                  " Flags: --normal (default) --reverse"}
