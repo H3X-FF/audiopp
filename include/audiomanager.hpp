@@ -11,11 +11,17 @@
 
 #include "states.hpp"
 
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
+
 namespace fs = std::filesystem;
 
 /**
  * @class AudioManager
- * @brief Handles audio initialization, playback, and writes display state.
+ * @brief Handles audio initialization, playback, and writes display state
  */
 class AudioManager {
 
@@ -23,8 +29,10 @@ class AudioManager {
     std::atomic<AudioState>* audioState;
     AppState* appState;
     AudioInfoState* audioInfoState;
+    WINDOW** audioVisualWindow;
 
     std::thread audioThread;
+    std::thread visThread;
 
     ma_device device;
     ma_decoder decoder;
@@ -69,7 +77,7 @@ public:
     bool wasPaused;
     std::atomic<float> volumeSlider;
 
-    AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic);
+    AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic, WINDOW** audioVisWin);
 
     /** @brief Responsible for creating a new audio thread, and also responsible for stopping an active thread.
      *  Writes audio display info to displayState for the TUI to render. */

@@ -52,6 +52,10 @@ else()
 
 endif ()
 
+list(APPEND SRC_FILES
+        external/kissfft/kiss_fft.c
+        external/kissfft/kiss_fftr.c)
+
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -2,7 +2,6 @@
 #ifndef AUDIOPP_UI_HPP
 #define AUDIOPP_UI_HPP
 
-#include <atomic>
 #include <chrono>
 
 #ifdef _WIN32

@@ -10,3 +10,6 @@
 [submodule "external/PDCursesMod"]
 	path = external/PDCursesMod
 	url = https://github.com/Bill-Gray/PDCursesMod.git
+[submodule "external/kissfft"]
+	path = external/kissfft
+	url = https://github.com/mborgerding/kissfft.git

@@ -1,7 +1,14 @@
 #include <cmath>
+#include <kissfft/kiss_fft.h>
+#include <kissfft/kiss_fftr.h>
+#include <algorithm>
 
 #include "animations.hpp"
+
+#include <bits/this_thread_sleep.h>
+
 #include "states.hpp"
+#include "ui.hpp"
 
 #ifdef _WIN32
     #include <PDCursesMod/curses.h>
@@ -9,28 +16,107 @@
     #include <ncursesw/ncurses.h>
 #endif
 
-void renderOscilloscope(WINDOW*& audioVisualWindow, AudioInfoState& audioInfoState) {
-    int winHeight, winWidth;
-    getmaxyx(audioVisualWindow, winHeight, winWidth);
+void renderWaveform(WINDOW*& audioVisualWindow, AppState& appState, std::atomic<AudioState>& audioState) {
+    const int SAMPLE_SIZE = 1024;
+    kiss_fftr_cfg fftConfig = kiss_fftr_alloc(SAMPLE_SIZE, 0, nullptr, nullptr);
+    std::array<float, SAMPLE_SIZE> previousFrame;
+    previousFrame.fill(0.0f);
 
-    int centerY = winHeight / 2;
-    double frequency = 0.15;
-    int maxAmplitude = 3;
+    while (audioState.load() != AudioState::STOPPED) {
+        auto start = std::chrono::high_resolution_clock::now();
 
-    werase(audioVisualWindow);
+        if (appState.audioInfoState.samplesReady.load() && !appState.shouldResize) {
+            int winHeight, winWidth;
+            getmaxyx(audioVisualWindow, winHeight, winWidth);
 
-    wattron(audioVisualWindow, COLOR_PAIR(4));
+            // Set the spectrum floor to the bottom of the window (above the border)
+            int spectrumFloorY = winHeight - 2;
+            int maxHeight = winHeight - 2;
 
-    for (int x = 0; x < winWidth; x++) {
-        double sineVal = audioInfoState.volume * audioInfoState.amplitude * std::sin((x * frequency) - audioInfoState.visTimer);
-        double harmonic = audioInfoState.volume * audioInfoState.amplitude * std::sin((x * frequency * 2.5) + (audioInfoState.visTimer * 0.5)) * 0.3;
-        int yOffset = static_cast<int>((sineVal + harmonic) * maxAmplitude * audioInfoState.amplitude);
-        int finalY = centerY + yOffset;
+            // Hann window to keep the bars clean
+            std::array<float, 1024> windowedSamples;
+            for (int i = 0; i < 1024; i++) {
+                float hann = 0.5f * (1.0f - std::cos(2.0f * M_PI * i / 1023.0f));
+                windowedSamples[i] = appState.audioInfoState.samplesBuf[i] * hann;
+            }
 
-        if (finalY > 0 && finalY < winHeight - 1) mvwaddwstr(audioVisualWindow, finalY, x, L"━");
+
+            std::array<kiss_fft_cpx, 513> fftOutput;
+            kiss_fftr(fftConfig, windowedSamples.data(), fftOutput.data());
+
+            // Extracts frequency magnitudes
+            std::array<float, 513> fftMagnitudes;
+            float globalPeak = 0.001f;
+            for (int b = 0; b < 513; b++) {
+                fftMagnitudes[b] = std::sqrt(fftOutput[b].r * fftOutput[b].r + fftOutput[b].i * fftOutput[b].i);
+                if (fftMagnitudes[b] > globalPeak) {
+                    globalPeak = fftMagnitudes[b];
+                }
+            }
+
+            // maps to screen columns (Using only the audible ~250 bins)
+            wattron(audioVisualWindow, COLOR_PAIR(4));
+            for (int x = 0; x < winWidth; x++) {
+                float progress = static_cast<float>(x) / winWidth;
+
+                // logarithmic mapping
+                // Stretches bass/mids across the window and leaves the high treble on the right
+                int startBin = static_cast<int>(std::pow(progress, 2.0f) * 190);
+                int endBin = static_cast<int>(std::pow(static_cast<float>(x + 1) / winWidth, 2.0f) * 190);
+
+                if (endBin <= startBin) endBin = startBin + 1;
+
+                float localPeak = 0.0f;
+                for (int b = startBin; b < endBin && b < 513; b++) {
+                    if (fftMagnitudes[b] > localPeak) {
+                        localPeak = fftMagnitudes[b];
+                    }
+                }
+
+                // Treble balance
+                float trebleBoost = 1.0f + (progress * 4.5f);
+                int targetHeight = static_cast<int>((localPeak / globalPeak) * maxHeight * trebleBoost);
+                if (targetHeight > maxHeight) targetHeight = maxHeight;
+
+                // Smoothed fall dynamics
+                float diff = targetHeight - previousFrame[x];
+                float smoothHeight = (diff > 0) ? (previousFrame[x] + diff * 0.70f) : (previousFrame[x] * 0.84f);
+                previousFrame[x] = smoothHeight;
+
+                int barHeight = static_cast<int>(smoothHeight);
+
+                for (int y = 0; y < winHeight; y++) {
+                    mvwaddwstr(audioVisualWindow, y, x, L" ");
+                }
+
+                // Render columns upward from the spectrum floor
+                for (int y = 0; y <= barHeight; y++) {
+                    mvwaddwstr(audioVisualWindow, spectrumFloorY - y, x, L"▌");
+                }
+            }
+            wattroff(audioVisualWindow, COLOR_PAIR(4));
+
+
+            createBorder(audioVisualWindow);
+            wnoutrefresh(audioVisualWindow);
+            appState.audioInfoState.samplesReady.store(false);
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed = end - start;
+
+        if (elapsed < std::chrono::milliseconds(16)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(16) - elapsed);
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    wattroff(audioVisualWindow, COLOR_PAIR(4));
+    werase(audioVisualWindow);
+    createBorder(audioVisualWindow);
+    wnoutrefresh(audioVisualWindow);
+
+    kiss_fftr_free(fftConfig);
 }
 
 void renderProgress(WINDOW*& audioInfoWindow, int windowWidth, AudioInfoState& audioInfoState) {

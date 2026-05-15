@@ -144,8 +144,8 @@ void resizeWin(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVisu
         // Prevents drawing "info" after resizing but nothing is playing
         if (appState.playingIndex != -1) {
             // This is for displaying the info on the audio window after resizing, otherwise they would disappear
-            appState.audioDisplayState.shouldDrawAudioInfo = appState.playingIndex != -1;
-            appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+            appState.audioInfoState.shouldDrawAudioInfo = appState.playingIndex != -1;
+            appState.audioInfoState.shouldUpdateVolOrRepeatTxt = true;
         }
     }
 }
@@ -193,8 +193,7 @@ void drawFileList(WINDOW*& fileWindow, AppState& appState) {
 
     createBorder(fileWindow);
 
-    wrefresh(fileWindow);
-    refresh();
+    wnoutrefresh(fileWindow);
 
     appState.shouldRedrawFileList = false;
 }
@@ -206,10 +205,9 @@ void drawScreen(WINDOW*& fileWindow, WINDOW*& audioInfoWindow, WINDOW*& audioVis
     createBorder(audioInfoWindow);
     createBorder(audioVisualWindow);
 
-    wrefresh(fileWindow);
-    wrefresh(audioInfoWindow);
-    wrefresh(audioVisualWindow);
-    refresh();
+    wnoutrefresh(fileWindow);
+    wnoutrefresh(audioInfoWindow);
+    wnoutrefresh(audioVisualWindow);
 
     appState.shouldRedrawScreen = false;
 }
@@ -222,7 +220,7 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
     // Helps maintain playing highlighter after refresh
     if (appState.playingIndex != -1) {
         for (int i = 0; i < appState.vfs.audioFileNames.size(); i++) {
-            if (appState.audioDisplayState.audioName == appState.vfs.audioFileNames[i]) {
+            if (appState.audioInfoState.audioName == appState.vfs.audioFileNames[i]) {
                 appState.playingIndex = i;
                 break;
             }
@@ -236,16 +234,14 @@ void refreshFiles(WINDOW*& fileWindow, AppState& appState) {
 
 void renderAnimations(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, AudioInfoState& audioInfoState) {
 
-    renderOscilloscope(audioVisualWindow, audioInfoState);
+    // renderOscilloscope(audioVisualWindow, audioInfoState);
 
     int winWidth = getmaxx(audioInfoWindow);
     renderProgress(audioInfoWindow, winWidth, audioInfoState);
 
     createBorder(audioInfoWindow);
-    createBorder(audioVisualWindow);
 
-    wrefresh(audioInfoWindow);
-    wrefresh(audioVisualWindow);
+    wnoutrefresh(audioInfoWindow);
 
     audioInfoState.shouldRenderAnimation = false;
 }
@@ -277,8 +273,7 @@ void displayAudioInfo(WINDOW*& audioInfoWindow, AudioInfoState& audioInfoState) 
     // Recreating the border since adding things to the window removes some parts :P
     createBorder(audioInfoWindow);
 
-    wrefresh(audioInfoWindow);
-    refresh();
+    wnoutrefresh(audioInfoWindow);
 
     audioInfoState.shouldDrawAudioInfo = false;
 }
@@ -341,8 +336,7 @@ void displayVolAndRepeatMode(WINDOW*& audioInfoWindow, AppState& appState, Audio
 
     createBorder(audioInfoWindow);
 
-    wrefresh(audioInfoWindow);
-    refresh();
+    wnoutrefresh(audioInfoWindow);
 
     audioInfoState.shouldUpdateVolOrRepeatTxt = false;
 }
@@ -354,9 +348,8 @@ void cleanupAudioWindows(WINDOW*& audioInfoWindow, WINDOW*& audioVisualWindow, A
     createBorder(audioInfoWindow);
     createBorder(audioVisualWindow);
 
-    wrefresh(audioInfoWindow);
-    wrefresh(audioVisualWindow);
-    refresh();
+    wnoutrefresh(audioInfoWindow);
+    wnoutrefresh(audioVisualWindow);
 
     audioInfoState.shouldCleanup = false;
 }

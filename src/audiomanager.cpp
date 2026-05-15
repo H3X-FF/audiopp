@@ -12,6 +12,13 @@
 #include "audiomanager.hpp"
 #include "states.hpp"
 #include "file_commands.hpp"
+#include "animations.hpp"
+
+#ifdef _WIN32
+    #include <PDCursesMod/curses.h>
+#else
+    #include <ncursesw/ncurses.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -19,14 +26,15 @@ namespace {
     // Resets UI-related playback state when audio stops.
     void resetUIRelatedStates(AppState* appState) {
         appState->playingIndex = -1;
-        appState->audioDisplayState.audioName = "";
+        appState->audioInfoState.audioName = "";
     }
 } // namespace
 
-AudioManager::AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic) {
+AudioManager::AudioManager(AudioInfoState* audInfoState, AppState* aState, std::atomic<AudioState>* audioAtomic, WINDOW** audioVisWin) {
     audioState = audioAtomic;
     appState = aState;
     audioInfoState = audInfoState;
+    audioVisualWindow = audioVisWin;
 
     volumeSlider.store(audioInfoState->volume);
 }
@@ -46,8 +54,6 @@ void AudioManager::terminateAudioThread() {
 * then the new thread comes in and plays the new audio.
 */
 void AudioManager::triggerAudioThread(char* filePath) {
-
-
 
     // Wait for the existing thread to finish its cleanup before starting a new one
     terminateAudioThread();
@@ -72,6 +78,8 @@ void AudioManager::triggerAudioThread(char* filePath) {
 
     audioThread = std::thread(&AudioManager::manageAudioThread, this);
     audioThreadActive = true;
+    audioInfoState->samplesReady.store(false);
+    audioInfoState->bufWriteIdx = 0;
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -154,7 +162,6 @@ AudioState AudioManager::initializeMA() {
 
     // Set initial seek time to the past to avoid triggering double-press on first load
     lastBackSeekTime = std::chrono::steady_clock::now() - std::chrono::seconds(1);
-
     return AudioState::SUCCESS;
 }
 
@@ -237,9 +244,24 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
         ma_uint64 framesRead = 0;
         ma_decoder_read_pcm_frames(&pManager->decoder, pOutput, frameCount, &framesRead);
 
-        // Used for volume
-            float* samples = static_cast<float*>(pOutput);
+        float* samples = static_cast<float*>(pOutput);
 
+        // Collect the samples for the visual
+        if (!pManager->audioInfoState->samplesReady.load()) {
+            int samplesToRead = framesRead * 2;
+
+            for (int i = 0; i < samplesToRead; i += 2) {
+                pManager->audioInfoState->samplesBuf[pManager->audioInfoState->bufWriteIdx] = samples[i];
+                pManager->audioInfoState->bufWriteIdx++;
+
+                if (pManager->audioInfoState->bufWriteIdx >= pManager->audioInfoState->samplesBuf.size()) {
+                    pManager->audioInfoState->bufWriteIdx = 0;
+                    pManager->audioInfoState->samplesReady.store(true);
+                }
+            }
+        }
+
+        // Used for volume
             float gain = std::pow(pManager->volumeSlider.load(std::memory_order_relaxed), 3);
 
             ma_uint32 sampleCount = frameCount * pDevice->playback.channels;
@@ -264,12 +286,17 @@ void AudioManager::data_callback(ma_device* pDevice, void* pOutput, const void* 
 }
 
 void AudioManager::manageAudioThread() {
-
     if (initializeMA() == AudioState::FAILED) {
         audioState->store(AudioState::FAILED);
         resetUIRelatedStates(appState);
         return;
     }
+
+    std::thread(renderWaveform,
+    std::ref(*audioVisualWindow),
+    std::ref(*appState),
+    std::ref(*audioState)
+    ).detach();
 
     // UI related
     audioInfoState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
@@ -279,36 +306,22 @@ void AudioManager::manageAudioThread() {
     audioInfoState->volume = volumeSlider;
     audioInfoState->shouldUpdateVolOrRepeatTxt = true;
 
-    audioInfoState->amplitude = 0.0;
-    audioInfoState->visTimer = 0.0;
-
     appState->shouldRedrawScreen = true;
 
     //------------
-
-    auto lastTime = std::chrono::high_resolution_clock::now();
-
-
     while (audioState->load() != AudioState::STOPPED) {
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
-        lastTime = currentTime;
-
         // Sync the current frame cursor with the decoder position
         ma_decoder_get_cursor_in_pcm_frames(&decoder, &frameCursor);
 
         totalElapsedTime = static_cast<double>(frameCursor) / deviceConfig.sampleRate;
 
-        // Increment timer for wave movement
-        audioInfoState->visTimer += 6.0 * deltaTime;
-
         // Handling the visualizer by making a smooth fade in/fade out depending on state
         if (audioState->load() == AudioState::PLAYING) {
             ma_device_start(&device);
-            if (audioInfoState->amplitude < 1.0) audioInfoState->amplitude += 4.0 * deltaTime;
         }
         else if (audioState->load() == AudioState::PAUSED) {
-            if (audioInfoState->amplitude > 0) audioInfoState->amplitude -= 4.0 * deltaTime;
+            audioInfoState->samplesBuf.fill(0);
+            audioInfoState->samplesReady.store(true);
         }
 
         // Update display state (skip during resize to avoid flickering/potential crashes)
@@ -322,7 +335,6 @@ void AudioManager::manageAudioThread() {
         std::this_thread::sleep_for(std::chrono::milliseconds(60));
     }
 
-
     if (appState->repeatMode == RepeatModes::REPEAT_OFF &&
         appState->playingIndex == appState->numberOfFiles-1 && audioFinished) {
 
@@ -331,8 +343,6 @@ void AudioManager::manageAudioThread() {
         appState->shouldRedrawScreen = true;
     }
     else if (audioFinished) appState->shouldPlayNext = true;
-
-
 
     uninitializeMA();
 }

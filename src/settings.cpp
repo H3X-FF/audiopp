@@ -9,7 +9,7 @@ void saveSettings(AppState& appState) {
 
     if (settingsFile.is_open()) {
 
-        settingsFile << "VOLUME=" << appState.audioDisplayState.volume << '\n';
+        settingsFile << "VOLUME=" << appState.audioInfoState.volume << '\n';
         settingsFile << "REPEAT_MODE=" << static_cast<int>(appState.repeatMode) << '\n';
         settingsFile << "SORT=" << appState.sortActions.sortType << '\n';
         settingsFile << "SORT_REVERSED=" << appState.sortActions.reversed << '\n';
@@ -34,10 +34,10 @@ void loadSettings(AppState& appState) {
                 if (key == "VOLUME") {
 
                     try {
-                        appState.audioDisplayState.volume = std::stof(val);
+                        appState.audioInfoState.volume = std::stof(val);
                     }
                     catch (...) {
-                        appState.audioDisplayState.volume = 0.7f;
+                        appState.audioInfoState.volume = 0.7f;
                     }
                 }
 
@@ -72,7 +72,7 @@ void loadSettings(AppState& appState) {
         settingsFile.close();
     }
     else { // Fallback incase the file couldn't open
-        appState.audioDisplayState.volume = 0.7f;
+        appState.audioInfoState.volume = 0.7f;
         appState.repeatMode = static_cast<RepeatModes>(0);
         appState.sortActions.sortType = "name";
         appState.sortActions.reversed = false;
