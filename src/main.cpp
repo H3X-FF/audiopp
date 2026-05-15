@@ -36,11 +36,11 @@ int main() {
     initializeWindows(fileWindow, audioInfoWindow, audioVisualWindow);
 
     initializeAppState(appState);
-    initializeAudioDisplayState(appState.audioDisplayState);
+    initializeAudioDisplayState(appState.audioInfoState);
 
     loadSettings(appState);
 
-    AudioManager player(&appState.audioDisplayState, &appState, &audioState);
+    AudioManager player(&appState.audioInfoState, &appState, &audioState, &audioVisualWindow);
 
     //---Program loop---
     while (running) {
@@ -148,7 +148,7 @@ int main() {
                 case 'l':
                     appState.repeatMode = static_cast<RepeatModes>((static_cast<int>(appState.repeatMode) + 1) % 3);
 
-                    appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+                    appState.audioInfoState.shouldUpdateVolOrRepeatTxt = true;
 
                     break;
 
@@ -173,8 +173,8 @@ int main() {
                         float newVol = std::max(0.0f, currentVol - 0.05f);
                         player.volumeSlider.store(newVol, std::memory_order_relaxed);
 
-                        appState.audioDisplayState.volume = newVol;
-                        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+                        appState.audioInfoState.volume = newVol;
+                        appState.audioInfoState.shouldUpdateVolOrRepeatTxt = true;
                     }
                     break;
 
@@ -184,8 +184,8 @@ int main() {
                         float newVol = std::min(1.0f, currentVol + 0.05f);
                         player.volumeSlider.store(newVol, std::memory_order_relaxed);
 
-                        appState.audioDisplayState.volume = newVol;
-                        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+                        appState.audioInfoState.volume = newVol;
+                        appState.audioInfoState.shouldUpdateVolOrRepeatTxt = true;
                     }
                     break;
 
@@ -225,20 +225,20 @@ int main() {
             resizeWin(fileWindow, audioInfoWindow, audioVisualWindow, appState, lastResizeTime);
         }
 
-        if (appState.audioDisplayState.shouldRenderAnimation) {
-            renderAnimations(audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        if (appState.audioInfoState.shouldRenderAnimation) {
+            renderAnimations(audioInfoWindow, audioVisualWindow, appState.audioInfoState);
         }
 
-        if (appState.audioDisplayState.shouldDrawAudioInfo) {
-            displayAudioInfo(audioInfoWindow, appState.audioDisplayState);
+        if (appState.audioInfoState.shouldDrawAudioInfo) {
+            displayAudioInfo(audioInfoWindow, appState.audioInfoState);
         }
 
-        if (appState.audioDisplayState.shouldUpdateVolOrRepeatTxt) {
-            displayVolAndRepeatMode(audioInfoWindow, appState, appState.audioDisplayState);
+        if (appState.audioInfoState.shouldUpdateVolOrRepeatTxt) {
+            displayVolAndRepeatMode(audioInfoWindow, appState, appState.audioInfoState);
         }
 
-        if (appState.audioDisplayState.shouldCleanup) {
-            cleanupAudioWindows(audioInfoWindow, audioVisualWindow, appState.audioDisplayState);
+        if (appState.audioInfoState.shouldCleanup) {
+            cleanupAudioWindows(audioInfoWindow, audioVisualWindow, appState.audioInfoState);
         }
 
         if (appState.shouldPlayNext) {
@@ -263,6 +263,8 @@ int main() {
             clrtoeol();
             refresh();
         }
+
+        doupdate();
 
     }
 

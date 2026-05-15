@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <array>
+#include <atomic>
 #include <unordered_map>
 
 namespace fs = std::filesystem;
@@ -38,8 +40,10 @@ struct AudioInfoState {
 
     double totalSeconds;
     double totalElapsedTime;
-    double amplitude;
-    double visTimer;
+
+    size_t bufWriteIdx;
+    std::array<float, 1024> samplesBuf;
+    std::atomic<bool> samplesReady;
 
     float volume;
 
@@ -84,7 +88,7 @@ struct AppState {
     fs::path audioppJsonFile;
     fs::path audioppSettingsFile;
 
-    AudioInfoState audioDisplayState;
+    AudioInfoState audioInfoState;
     SortCommandActions sortActions;
     VirtualFS vfs;
 };

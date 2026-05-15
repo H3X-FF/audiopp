@@ -40,9 +40,7 @@ void initializeAudioDisplayState(AudioInfoState& audioDisplay) {
     audioDisplay.elapsedSeconds = 0;
 
     audioDisplay.totalSeconds = 0;
-    audioDisplay.totalElapsedTime = 0;
-    audioDisplay.amplitude = 0.0;
-    audioDisplay.visTimer = 0.0;
+    audioDisplay.totalElapsedTime = 0;;
 
     audioDisplay.shouldDrawAudioInfo = false;
     audioDisplay.shouldRenderAnimation = false;

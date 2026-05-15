@@ -1,7 +1,8 @@
 # Audio++
 **Audio++** is a minimal, terminal-based audio player written in modern C++ with a primary focus on a lightweight design and direct interaction.
-<img width="915" height="562" alt="Screenshot_20260507_035339" src="https://github.com/user-attachments/assets/fbcd6e2c-721d-4a59-82f1-15afa2d9359d" />
-It's primarly made for Linux systems, but also support Windows. It should also work on MacOS, though it hasn't been tested.
+![img.png](screenshot/img.png)
+<br>
+It's primarily made for Linux systems, but also support Windows (RECOMMENDED: Terminal.exe). It should also work on macOS, though it hasn't been tested.
 
 # Installing and building from source
 

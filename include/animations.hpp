@@ -10,7 +10,7 @@
     #include <ncursesw/ncurses.h>
 #endif
 
-void renderOscilloscope(WINDOW*& audioVisualWindow, AudioInfoState& displayState);
+void renderWaveform(WINDOW*& audioVisualWindow, AppState& appState, std::atomic<AudioState>& audioState);
 
 /** @brief Renders the timer and progress bar */
 void renderProgress(WINDOW*& audioInfoWindow, int windowWidth, AudioInfoState& displayState);

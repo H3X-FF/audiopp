@@ -237,7 +237,7 @@ void displayHelp(AppState& appState) {
 
     // Avoid writing text while nothing, but display it if something is playing after exiting the help screen
     if (appState.playingIndex != -1) {
-        appState.audioDisplayState.shouldDrawAudioInfo = true;
-        appState.audioDisplayState.shouldUpdateVolOrRepeatTxt = true;
+        appState.audioInfoState.shouldDrawAudioInfo = true;
+        appState.audioInfoState.shouldUpdateVolOrRepeatTxt = true;
     }
 }
