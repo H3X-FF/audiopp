@@ -44,6 +44,7 @@ struct AudioInfoState {
     size_t bufWriteIdx;
     std::array<float, 1024> samplesBuf;
     std::atomic<bool> samplesReady;
+    std::atomic<bool> visThreadShouldExit;
 
     float volume;
 

@@ -22,7 +22,7 @@ void renderWaveform(WINDOW*& audioVisualWindow, AppState& appState, std::atomic<
     std::array<float, SAMPLE_SIZE> previousFrame;
     previousFrame.fill(0.0f);
 
-    while (audioState.load() != AudioState::STOPPED) {
+    while (!appState.audioInfoState.visThreadShouldExit.load()) {
 
         if (appState.audioInfoState.samplesReady.load() && !appState.shouldResize) {
             int winHeight, winWidth;
@@ -103,10 +103,6 @@ void renderWaveform(WINDOW*& audioVisualWindow, AppState& appState, std::atomic<
 
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
-
-    werase(audioVisualWindow);
-    createBorder(audioVisualWindow);
-    wnoutrefresh(audioVisualWindow);
 
     kiss_fftr_free(fftConfig);
 }

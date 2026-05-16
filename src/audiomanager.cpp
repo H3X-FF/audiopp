@@ -292,6 +292,7 @@ void AudioManager::manageAudioThread() {
         return;
     }
 
+    audioInfoState->visThreadShouldExit.store(false);
     std::thread(renderWaveform,
     std::ref(*audioVisualWindow),
     std::ref(*appState),
@@ -343,6 +344,8 @@ void AudioManager::manageAudioThread() {
         appState->shouldRedrawScreen = true;
     }
     else if (audioFinished) appState->shouldPlayNext = true;
+
+    audioInfoState->visThreadShouldExit.store(true);
 
     uninitializeMA();
 }
