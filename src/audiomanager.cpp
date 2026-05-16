@@ -43,6 +43,11 @@ AudioManager::AudioManager(AudioInfoState* audInfoState, AppState* aState, std::
 void AudioManager::terminateAudioThread() {
     if (!audioThreadActive) return; // if there's no active thread, then we simply return
 
+    audioInfoState->samplesReady.store(false);
+    audioInfoState->visThreadShouldExit.store(true);
+
+    if (visThread.joinable()) visThread.join();
+
     audioState->store(AudioState::STOPPED);
     if (audioThread.joinable()) audioThread.join();
     audioThreadActive = false;
@@ -78,8 +83,15 @@ void AudioManager::triggerAudioThread(char* filePath) {
 
     audioThread = std::thread(&AudioManager::manageAudioThread, this);
     audioThreadActive = true;
+
     audioInfoState->samplesReady.store(false);
     audioInfoState->bufWriteIdx = 0;
+    audioInfoState->visThreadShouldExit.store(false);
+    visThread = std::thread(renderWaveform,
+    std::ref(*audioVisualWindow),
+    std::ref(*appState),
+    std::ref(*audioState)
+    );
 }
 
 std::string AudioManager::getFullAudioDuration() {
@@ -291,12 +303,6 @@ void AudioManager::manageAudioThread() {
         resetUIRelatedStates(appState);
         return;
     }
-
-    std::thread(renderWaveform,
-    std::ref(*audioVisualWindow),
-    std::ref(*appState),
-    std::ref(*audioState)
-    ).detach();
 
     // UI related
     audioInfoState->audioName = appState->vfs.audioFileNames[appState->playingIndex];
