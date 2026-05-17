@@ -17,16 +17,14 @@ Inside your terminal, run `git clone --recurse https://github.com/H3X-FF/audiopp
 ## Building the project
 Inside the audiopp directory, run the following:
 ```
-mkdir build
-cd build
-cmake ..
-cmake --build .
+cmake -S . -B build
+cmake --build build
 ```
 
 ---
 
 ## Run it
-Now that you have built it, you can run it!<br>
+Inside your build directory, you can now run it<br>
 `./audiopp`
 
 ---
