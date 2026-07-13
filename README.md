@@ -1,4 +1,4 @@
-# Audio++
+# Audio++ (Paused: Might be Revamped)
 **Audio++** is a minimal, terminal-based audio player written in modern C++ with a primary focus on a lightweight design and direct interaction.
 ![img.png](screenshot/img.png)
 <br>
